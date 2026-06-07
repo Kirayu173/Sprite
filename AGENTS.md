@@ -1,0 +1,99 @@
+# Execution Guidelines
+
+## 1. Think Clearly Before Coding
+
+**Do not make assumptions by default. Do not hide confusion. Put tradeoffs on the table.**
+
+Before implementing:
+
+- State your assumptions clearly; ask when uncertain.
+- If there are multiple possible interpretations, list them instead of silently choosing one.
+- If there is a simpler approach, say so; push back when pushback is warranted.
+- If something is unclear, stop first: explain what is unclear, then ask.
+
+## 2. Prefer Simplicity
+
+**Solve the problem with the least code. Do not write speculative code.**
+
+- Do not add features beyond the requirement.
+- Do not create abstractions for code used only once.
+- Do not add unrequested "flexibility" or "configurability".
+- Do not write error handling for scenarios that cannot occur.
+- If you wrote 200 lines where 50 would do, rewrite it. Ask yourself: "Would a senior engineer consider this overengineered?" If yes, simplify.
+
+## 3. Make Precise Changes
+
+**Change only what must be changed. Clean up only what you disturbed.**
+
+When editing existing code:
+
+- Do not "helpfully improve" adjacent code, comments, or formatting.
+- Do not refactor things that are not broken.
+- Match the existing style, even if your personal preference differs.
+- If you find unrelated dead code, mention it briefly unless explicitly instructed; do not delete it on your own.
+
+When your changes create unused leftovers:
+
+- Remove imports, variables, and functions that became unused **because of your changes**.
+- Do not delete pre-existing dead code unless the user explicitly asks.
+
+The standard: **every changed line must trace directly back to the user's request.**
+
+## 4. Keep Rust Modules Small
+
+**Prefer focused modules over central files that keep growing.**
+
+- Target Rust production modules under 500 lines, excluding tests.
+- If a Rust file exceeds roughly 800 production lines, do not add new functionality there unless there is a strong documented reason; create or extend a focused module instead.
+- When extracting code from a large module, move the related tests and module/type docs with the implementation so invariants stay close to the code that owns them.
+- Do not create helper methods or modules only to satisfy line counts if they are used once and make the code harder to follow.
+- Treat these high-touch files as split-first areas: `crates/runtime-core/src/app/domain/reduce.rs`, `crates/grpc/src/grpc/conversions.rs`, `apps/desktop/src-tauri/src/lib.rs`, `crates/runtime-core/src/app/domain/runtime/session_actor.rs`, and `crates/runtime-core/src/tools/builtin_tools/dispatch_agent.rs`.
+
+## 5. Execute Toward Verifiable Goals
+
+**Define success criteria. Iterate until verification passes.**
+
+Turn tasks into verifiable goals, for example:
+
+- "Add validation" -> "Write a test for invalid input, then make it pass"
+- "Fix a bug" -> "Write a test that reproduces the bug, then make it pass"
+- "Refactor X" -> "Tests pass before and after the refactor"
+
+For multi-step tasks, write a short plan:
+
+```
+1. [Step] -> Verify: [check]
+2. [Step] -> Verify: [check]
+3. [Step] -> Verify: [check]
+```
+
+The clearer the success criteria, the easier it is to iterate independently. Weak criteria ("it runs") will keep requiring clarification.
+
+## 6. File Encoding
+
+**Whenever opening, reading, or writing files, default to UTF-8** unless the user or project explicitly specifies another encoding.
+
+When reading or writing text in editors, CLI tools, and programs, use UTF-8 explicitly to avoid mojibake or silent corruption caused by system default encodings.
+
+## 7. Post-Development Verification
+
+**After completing development, execute the following verification steps:**
+
+1. Confirm the frontend project builds successfully with no compilation errors
+2. Confirm the backend project builds successfully with no compilation errors
+3. Verify both frontend and backend services start and run correctly by executing `npm run desktop:dev`
+4. All occupied resources must be closed after the test is completed
+
+All verification steps must pass to ensure the completeness and runnability of the development成果。
+
+## 8. assistant-ui Chat Refactor Guidance
+
+When working on the planned chat input and dialogue-area refactor, use assistant-ui as the native conversation UI layer.
+
+- Consult `docs/assistant-ui-integration.md` and the official docs at `https://www.assistant-ui.com/llms.txt` before changing assistant-ui APIs.
+- Use the installed assistant-ui skills after restarting Codex: `assistant-ui`, `setup`, `runtime`, `primitives`, `streaming`, `thread-list`, `tools`, `cloud`, and `update`.
+- Wrap the chat surface with `AssistantRuntimeProvider` from `@assistant-ui/react`.
+- Build the dialogue area with assistant-ui primitives such as `ThreadPrimitive`, `MessagePrimitive`, `ActionBarPrimitive`, `BranchPickerPrimitive`, and `ErrorPrimitive`.
+- Build the input box with `ComposerPrimitive`; include send/cancel/edit/attachment controls only when required by the current Sprite flow.
+- For Sprite's current Vite React/Tauri architecture, decide the runtime explicitly before implementation: prefer `useExternalStoreRuntime` if existing Zustand/backend state remains authoritative, `useLocalRuntime` if assistant-ui owns frontend chat state, or `useChatRuntime` only if adopting Vercel AI SDK transport.
+- Do not install deprecated assistant-ui packages: `@assistant-ui/styles` or `@assistant-ui/react-ui`.
