@@ -75,18 +75,7 @@ The clearer the success criteria, the easier it is to iterate independently. Wea
 
 When reading or writing text in editors, CLI tools, and programs, use UTF-8 explicitly to avoid mojibake or silent corruption caused by system default encodings.
 
-## 7. Post-Development Verification
-
-**After completing development, execute the following verification steps:**
-
-1. Confirm the frontend project builds successfully with no compilation errors
-2. Confirm the backend project builds successfully with no compilation errors
-3. Verify both frontend and backend services start and run correctly by executing `npm run desktop:dev`
-4. All occupied resources must be closed after the test is completed
-
-All verification steps must pass to ensure the completeness and runnability of the development成果。
-
-## 8. assistant-ui Chat Refactor Guidance
+## 7. assistant-ui Chat Refactor Guidance
 
 When working on the planned chat input and dialogue-area refactor, use assistant-ui as the native conversation UI layer.
 
@@ -97,3 +86,14 @@ When working on the planned chat input and dialogue-area refactor, use assistant
 - Build the input box with `ComposerPrimitive`; include send/cancel/edit/attachment controls only when required by the current Sprite flow.
 - For Sprite's current Vite React/Tauri architecture, decide the runtime explicitly before implementation: prefer `useExternalStoreRuntime` if existing Zustand/backend state remains authoritative, `useLocalRuntime` if assistant-ui owns frontend chat state, or `useChatRuntime` only if adopting Vercel AI SDK transport.
 - Do not install deprecated assistant-ui packages: `@assistant-ui/styles` or `@assistant-ui/react-ui`.
+
+## 8. Migration: Copy-Then-Delete
+
+Adopt a "complete-copy-then-delete" migration strategy:
+
+1. Copy the relevant modules into the root workspace in their entirety.
+2. Centrally remove official authentication, official cloud, official products, and official telemetry.
+3. Use Sprite's own abstractions to replace the removed dependencies.
+4. Verify by capability to ensure no core capabilities are missing.
+
+Do not rewrite core state machines during the first copy. Sessions, turns, tool orchestration, persistence, and protocol models must keep their original semantics. Naming and structural convergence happen only after the official features are stripped.
