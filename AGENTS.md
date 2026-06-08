@@ -95,5 +95,6 @@ Adopt a "complete-copy-then-delete" migration strategy:
 2. Centrally remove official authentication, official cloud, official products, and official telemetry.
 3. Use Sprite's own abstractions to replace the removed dependencies.
 4. Verify by capability to ensure no core capabilities are missing.
+5. Do not keep dead code from the migration. Clean up unused imports, types, functions, and modules promptly as they become unreachable; do not leave them "just in case".
 
 Do not rewrite core state machines during the first copy. Sessions, turns, tool orchestration, persistence, and protocol models must keep their original semantics. Naming and structural convergence happen only after the official features are stripped.

@@ -1,0 +1,19 @@
+[package]
+name = "utils-image"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+
+[dependencies]
+base64 = "0.22.1"
+image = { version = "^0.25.9", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
+mime_guess = "2.0.5"
+thiserror = "2.0.17"
+tokio = { version = "1", features = ["fs", "rt", "rt-multi-thread", "macros"] }
+
+[dev-dependencies]
+image = { version = "^0.25.9", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
+
+[lib]
+doctest = false
+

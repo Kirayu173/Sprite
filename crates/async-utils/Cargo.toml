@@ -1,0 +1,16 @@
+[package]
+name = "async-utils"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+
+[dependencies]
+async-trait = "0.1.89"
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "time"] }
+tokio-util = "0.7.18"
+
+[dev-dependencies]
+pretty_assertions = "1.4.1"
+
+[lib]
+doctest = false
