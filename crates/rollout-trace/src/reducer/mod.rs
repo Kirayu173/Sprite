@@ -1,5 +1,7 @@
 //! Deterministic replay from raw trace events to `RolloutTrace`.
 
+#![allow(deprecated)]
+
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufRead;

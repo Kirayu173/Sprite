@@ -12,6 +12,15 @@ doctest = false
 [lints]
 workspace = true
 
+[features]
+default = []
+otlp-exporter = [
+    "dep:opentelemetry-otlp",
+    "dep:reqwest",
+    "reqwest/blocking",
+    "reqwest/rustls-tls",
+]
+
 [dependencies]
 app-protocol = { workspace = true }
 runtime-protocol = { workspace = true }
@@ -33,7 +42,7 @@ opentelemetry-otlp = { workspace = true, features = [
     "reqwest-rustls",
     "tls",
     "tls-roots",
-] }
+], optional = true }
 opentelemetry-semantic-conventions = { workspace = true }
 opentelemetry_sdk = { workspace = true, features = [
     "experimental_trace_batch_span_processor_with_async_runtime",
@@ -45,7 +54,7 @@ opentelemetry_sdk = { workspace = true, features = [
     "trace",
 ] }
 os_info = { workspace = true }
-reqwest = { workspace = true, features = ["blocking", "rustls-tls"] }
+reqwest = { workspace = true, optional = true, features = ["blocking", "rustls-tls"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 strum_macros = { workspace = true }

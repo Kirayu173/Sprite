@@ -4,6 +4,8 @@
 //! module owns the identity metadata parsing as well, so the central dispatcher
 //! does not need to know the shape of multi-agent session-source payloads.
 
+#![allow(deprecated)]
+
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
@@ -123,7 +125,7 @@ impl TraceReducer {
         Ok(())
     }
 
-    /// Starts a Codex turn inside an existing thread.
+    /// Starts a runtime activation inside an existing thread.
     pub(super) fn start_codex_turn(
         &mut self,
         seq: RawEventSeq,
@@ -155,7 +157,7 @@ impl TraceReducer {
         Ok(())
     }
 
-    /// Marks a Codex turn terminal and validates any thread id carried by the raw event.
+    /// Marks a runtime activation terminal and validates any thread id carried by the raw event.
     pub(super) fn end_codex_turn(
         &mut self,
         seq: RawEventSeq,

@@ -61,7 +61,6 @@ pub enum ClientRequestSerializationScope {
     Process { process_handle: String },
     FuzzyFileSearchSession { session_id: String },
     FsWatch { watch_id: String },
-    McpOauth { server_name: String },
 }
 
 macro_rules! serialization_scope_expr {
@@ -122,11 +121,6 @@ macro_rules! serialization_scope_expr {
     ($actual_params:ident, fs_watch_id($params:ident . $field:ident)) => {
         Some(ClientRequestSerializationScope::FsWatch {
             watch_id: $actual_params.$field.clone(),
-        })
-    };
-    ($actual_params:ident, mcp_oauth_server($params:ident . $field:ident)) => {
-        Some(ClientRequestSerializationScope::McpOauth {
-            server_name: $actual_params.$field.clone(),
         })
     };
 }
@@ -1489,7 +1483,7 @@ mod tests {
         let plugin_install = ClientRequest::PluginInstall {
             request_id: request_id(),
             params: v2::PluginInstallParams {
-                catalog_path: Some(absolute_path("/tmp/marketplace")),
+                catalog_path: Some(absolute_path("/tmp/catalog")),
                 plugin_name: "plugin-a".to_string(),
             },
         };
@@ -1530,7 +1524,7 @@ mod tests {
         let plugin_read = ClientRequest::PluginRead {
             request_id: request_id(),
             params: v2::PluginReadParams {
-                catalog_path: Some(absolute_path("/tmp/marketplace")),
+                catalog_path: Some(absolute_path("/tmp/catalog")),
                 plugin_name: "plugin-a".to_string(),
             },
         };

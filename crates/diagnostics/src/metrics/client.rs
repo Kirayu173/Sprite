@@ -1,4 +1,5 @@
 use crate::config::OtelExporter;
+#[cfg(feature = "otlp-exporter")]
 use crate::config::OtelHttpProtocol;
 use crate::metrics::MetricsError;
 use crate::metrics::Result;
@@ -14,12 +15,19 @@ use opentelemetry::metrics::Counter;
 use opentelemetry::metrics::Histogram;
 use opentelemetry::metrics::Meter;
 use opentelemetry::metrics::MeterProvider as _;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::OTEL_EXPORTER_OTLP_METRICS_TIMEOUT;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::Protocol;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::WithExportConfig;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::WithHttpConfig;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::WithTonicConfig;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::tonic_types::metadata::MetadataMap;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::tonic_types::transport::ClientTlsConfig;
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::metrics::InstrumentKind;
@@ -224,8 +232,13 @@ impl MetricsClient {
                 build_provider(resource, exporter, export_interval, runtime_reader.clone())
             }
             MetricsExporter::Otlp(exporter) => {
-                let exporter = build_otlp_metric_exporter(exporter, Temporality::Delta)?;
-                build_provider(resource, exporter, export_interval, runtime_reader.clone())
+                build_otlp_provider(
+                    resource,
+                    exporter,
+                    export_interval,
+                    runtime_reader.clone(),
+                    Temporality::Delta,
+                )?
             }
         };
 
@@ -329,11 +342,15 @@ where
     (provider, meter)
 }
 
-fn build_otlp_metric_exporter(
+#[cfg(feature = "otlp-exporter")]
+fn build_otlp_provider(
+    resource: Resource,
     exporter: OtelExporter,
+    interval: Option<Duration>,
+    runtime_reader: Option<Arc<ManualReader>>,
     temporality: Temporality,
-) -> Result<opentelemetry_otlp::MetricExporter> {
-    match exporter {
+) -> Result<(SdkMeterProvider, Meter)> {
+    let exporter = match exporter {
         OtelExporter::None => Err(MetricsError::ExporterDisabled),
         OtelExporter::OtlpGrpc {
             endpoint,
@@ -397,6 +414,27 @@ fn build_otlp_metric_exporter(
             exporter_builder
                 .build()
                 .map_err(|source| MetricsError::ExporterBuild { source })
+        }
+    }?;
+
+    Ok(build_provider(resource, exporter, interval, runtime_reader))
+}
+
+#[cfg(not(feature = "otlp-exporter"))]
+fn build_otlp_provider(
+    _resource: Resource,
+    exporter: OtelExporter,
+    _interval: Option<Duration>,
+    _runtime_reader: Option<Arc<ManualReader>>,
+    _temporality: Temporality,
+) -> Result<(SdkMeterProvider, Meter)> {
+    match exporter {
+        OtelExporter::None => Err(MetricsError::ExporterDisabled),
+        OtelExporter::OtlpGrpc { .. } | OtelExporter::OtlpHttp { .. } => {
+            Err(MetricsError::InvalidConfig {
+                message: "OTLP exporter support requires the diagnostics otlp-exporter feature"
+                    .to_string(),
+            })
         }
     }
 }

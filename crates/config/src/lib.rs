@@ -24,6 +24,7 @@ mod strict_config;
 mod thread_config;
 mod tui_keymap;
 pub mod types;
+mod warning_diagnostics;
 
 pub const CONFIG_TOML_FILE: &str = "config.toml";
 
@@ -61,6 +62,7 @@ pub use diagnostics::ConfigError;
 pub use diagnostics::ConfigLoadError;
 pub use diagnostics::TextPosition;
 pub use diagnostics::TextRange;
+pub use diagnostics::config_error_from_execpolicy_parse_error;
 pub use diagnostics::config_error_from_toml;
 pub use diagnostics::config_error_from_typed_toml;
 pub use diagnostics::first_layer_config_error;
@@ -122,3 +124,5 @@ pub use thread_config::ThreadConfigSource;
 pub use thread_config::UserThreadConfig;
 pub use toml::Value as TomlValue;
 pub use utils_absolute_path::AbsolutePathBuf;
+pub use warning_diagnostics::ConfigWarning;
+pub use warning_diagnostics::project_ignored_config_keys_warning;

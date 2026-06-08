@@ -4,6 +4,7 @@
 use crate::ConfigLayerEntry;
 use crate::ConfigLayerStack;
 use crate::ConfigLayerStackOrdering;
+use crate::RequirementsExecPolicyParseError;
 use crate::format_config_layer_source;
 use app_protocol::ConfigLayerSource;
 use serde::de::DeserializeOwned;
@@ -138,6 +139,48 @@ pub fn config_error_from_typed_toml<T: DeserializeOwned>(
         ConfigDiagnosticSource::Path(path.as_ref()),
         contents,
     )
+}
+
+pub fn config_error_from_execpolicy_parse_error(
+    path: impl AsRef<Path>,
+    contents: &str,
+    err: &RequirementsExecPolicyParseError,
+) -> ConfigError {
+    let path_segments = execpolicy_error_path(err);
+    let range = span_for_toml_key_path(contents, &path_segments)
+        .map(text_range_from_span_for(contents))
+        .unwrap_or_else(default_range);
+    ConfigError::new(path.as_ref().to_path_buf(), range, err.to_string())
+}
+
+fn text_range_from_span_for(
+    contents: &str,
+) -> impl FnOnce(std::ops::Range<usize>) -> TextRange + '_ {
+    |span| text_range_from_span(contents, span)
+}
+
+fn execpolicy_error_path(err: &RequirementsExecPolicyParseError) -> Vec<String> {
+    let mut path = vec!["rules".to_string(), "prefix_rules".to_string()];
+    match err {
+        RequirementsExecPolicyParseError::EmptyPrefixRules => path,
+        RequirementsExecPolicyParseError::EmptyPattern { rule_index }
+        | RequirementsExecPolicyParseError::EmptyJustification { rule_index }
+        | RequirementsExecPolicyParseError::MissingDecision { rule_index }
+        | RequirementsExecPolicyParseError::AllowDecisionNotAllowed { rule_index } => {
+            path.push(rule_index.to_string());
+            path
+        }
+        RequirementsExecPolicyParseError::InvalidPatternToken {
+            rule_index,
+            token_index,
+            ..
+        } => {
+            path.push(rule_index.to_string());
+            path.push("pattern".to_string());
+            path.push(token_index.to_string());
+            path
+        }
+    }
 }
 
 fn config_error_from_typed_toml_for_source<T: DeserializeOwned>(
@@ -490,5 +533,59 @@ fn seq_child<'a>(node: &TomlNode<'a>, index: usize) -> Option<TomlNode<'a>> {
         TomlNode::Item(Item::ArrayOfTables(array)) => array.get(index).map(TomlNode::Table),
         TomlNode::Value(Value::Array(array)) => array.get(index).map(TomlNode::Value),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::RequirementsExecPolicyParseError;
+
+    #[test]
+    fn execpolicy_parse_error_points_to_prefix_rule() {
+        let contents = r#"
+[rules]
+prefix_rules = [
+  { pattern = [{ token = "rm" }], decision = "allow" },
+]
+"#;
+
+        let error = config_error_from_execpolicy_parse_error(
+            "requirements.toml",
+            contents,
+            &RequirementsExecPolicyParseError::AllowDecisionNotAllowed { rule_index: 0 },
+        );
+
+        assert_eq!(error.range.start.line, 4);
+        assert_eq!(error.range.start.column, 3);
+        assert!(
+            error
+                .message
+                .contains("decision 'allow', which is not permitted")
+        );
+    }
+
+    #[test]
+    fn execpolicy_parse_error_points_to_pattern_token() {
+        let contents = r#"
+[rules]
+prefix_rules = [
+  { pattern = [{ token = "" }], decision = "prompt" },
+]
+"#;
+
+        let error = config_error_from_execpolicy_parse_error(
+            "requirements.toml",
+            contents,
+            &RequirementsExecPolicyParseError::InvalidPatternToken {
+                rule_index: 0,
+                token_index: 0,
+                reason: "token cannot be empty".to_string(),
+            },
+        );
+
+        assert_eq!(error.range.start.line, 4);
+        assert_eq!(error.range.start.column, 16);
+        assert!(error.message.contains("token cannot be empty"));
     }
 }

@@ -529,7 +529,7 @@ impl ThreadHistoryBuilder {
                 .clone()
                 .unwrap_or(serde_json::Value::Null),
             mcp_app_resource_uri: payload.mcp_app_resource_uri.clone(),
-            plugin_id: payload.plugin_id.clone(),
+            integration_id: payload.integration_id.clone(),
             result: None,
             error: None,
             duration_ms: None,
@@ -571,7 +571,7 @@ impl ThreadHistoryBuilder {
                 .clone()
                 .unwrap_or(serde_json::Value::Null),
             mcp_app_resource_uri: payload.mcp_app_resource_uri.clone(),
-            plugin_id: payload.plugin_id.clone(),
+            integration_id: payload.integration_id.clone(),
             result,
             error,
             duration_ms,
@@ -2013,7 +2013,7 @@ mod tests {
                     arguments: Some(serde_json::json!({"id":"123"})),
                 },
                 mcp_app_resource_uri: None,
-                plugin_id: None,
+                integration_id: None,
                 duration: Duration::from_millis(8),
                 result: Err("boom".into()),
             }),
@@ -2063,7 +2063,7 @@ mod tests {
                 status: McpToolCallStatus::Failed,
                 arguments: serde_json::json!({"id":"123"}),
                 mcp_app_resource_uri: None,
-                plugin_id: None,
+                integration_id: None,
                 result: None,
                 error: Some(McpToolCallError {
                     message: "boom".into(),
@@ -2091,7 +2091,7 @@ mod tests {
                     arguments: Some(serde_json::json!({"id":"123"})),
                 },
                 mcp_app_resource_uri: Some("ui://widget/lookup.html".into()),
-                plugin_id: Some("sample@test".into()),
+                integration_id: Some("sample@test".into()),
                 duration: Duration::from_millis(8),
                 result: Ok(CallToolResult {
                     content: vec![serde_json::json!({
@@ -2122,7 +2122,7 @@ mod tests {
                 status: McpToolCallStatus::Completed,
                 arguments: serde_json::json!({"id":"123"}),
                 mcp_app_resource_uri: Some("ui://widget/lookup.html".into()),
-                plugin_id: Some("sample@test".into()),
+                integration_id: Some("sample@test".into()),
                 result: Some(Box::new(McpToolCallResult {
                     content: vec![serde_json::json!({
                         "type": "text",

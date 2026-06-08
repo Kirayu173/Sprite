@@ -2,6 +2,8 @@ use http::HeaderMap;
 use http::StatusCode;
 
 const REQUEST_ID_HEADER: &str = "x-request-id";
+/// Upstream API request ID header retained for debug correlation. This is a
+/// provider-returned header, not an official product integration.
 const OAI_REQUEST_ID_HEADER: &str = "x-oai-request-id";
 const CF_RAY_HEADER: &str = "cf-ray";
 

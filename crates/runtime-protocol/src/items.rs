@@ -184,7 +184,8 @@ pub struct McpToolCallItem {
     pub mcp_app_resource_uri: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
-    pub plugin_id: Option<String>,
+    #[serde(alias = "plugin_id")]
+    pub integration_id: Option<String>,
     pub status: McpToolCallStatus,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
@@ -539,7 +540,7 @@ impl McpToolCallItem {
                 arguments: (!self.arguments.is_null()).then(|| self.arguments.clone()),
             },
             mcp_app_resource_uri: self.mcp_app_resource_uri.clone(),
-            plugin_id: self.plugin_id.clone(),
+            integration_id: self.integration_id.clone(),
         })
     }
 
@@ -558,7 +559,7 @@ impl McpToolCallItem {
                 arguments: (!self.arguments.is_null()).then(|| self.arguments.clone()),
             },
             mcp_app_resource_uri: self.mcp_app_resource_uri.clone(),
-            plugin_id: self.plugin_id.clone(),
+            integration_id: self.integration_id.clone(),
             duration: self.duration?,
             result,
         }))

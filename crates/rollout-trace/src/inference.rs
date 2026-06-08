@@ -4,6 +4,8 @@
 //! A disabled context records nothing, which keeps one-shot HTTP calls,
 //! WebSocket reuse, and retry/fallback attempts on the same code path.
 
+#![allow(deprecated)]
+
 use std::fmt::Display;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -55,7 +57,7 @@ struct EnabledInferenceTraceContext {
 
 /// One concrete upstream request attempt.
 ///
-/// A Codex turn can create multiple attempts when auth recovery retries the
+/// A runtime activation can create multiple attempts when auth recovery retries the
 /// HTTP request or WebSocket setup falls back to HTTP. Completion is often
 /// observed after the client returns the response stream, so the attempt owns
 /// the terminal guard that prevents duplicate lifecycle events.
@@ -99,7 +101,7 @@ impl InferenceTraceContext {
         }
     }
 
-    /// Builds an enabled context for all upstream attempts made by one Codex turn.
+    /// Builds an enabled context for all upstream attempts made by one runtime activation.
     pub fn enabled(
         writer: Arc<TraceWriter>,
         thread_id: AgentThreadId,
@@ -199,7 +201,7 @@ impl InferenceTraceAttempt {
     /// Records successful provider completion and serializes the observed output items.
     ///
     /// Callers pass protocol-native response items so this crate owns the
-    /// trace-specific serialization rules. That keeps codex-core focused on
+    /// trace-specific serialization rules. That keeps runtime core focused on
     /// transport behavior while preserving trace evidence that normal request
     /// serialization intentionally omits.
     pub fn record_completed(
@@ -265,7 +267,7 @@ impl InferenceTraceAttempt {
         );
     }
 
-    /// Records a provider stream that Codex intentionally stopped consuming.
+    /// Records a provider stream that Sprite intentionally stopped consuming.
     ///
     /// This happens when the turn is interrupted or when mailbox delivery
     /// preempts the current sampling request. Complete output items observed
@@ -317,7 +319,7 @@ impl InferenceTraceAttempt {
 ///
 /// The protocol serializer intentionally omits some readable reasoning content
 /// when shaping items for later model requests. Rollout traces need the item as
-/// Codex received it, so this helper restores that content in the raw payload.
+/// Sprite received it, so this helper restores that content in the raw payload.
 pub(crate) fn trace_response_item_json(item: &ResponseItem) -> JsonValue {
     let mut value = serde_json::to_value(item).unwrap_or_else(|err| {
         serde_json::json!({

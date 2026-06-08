@@ -1,5 +1,7 @@
 //! Append-only raw trace events.
 
+#![allow(deprecated)]
+
 use crate::model::AgentThreadId;
 use crate::model::CodeCellRuntimeStatus;
 use crate::model::CodexTurnId;
@@ -84,10 +86,12 @@ pub enum RawTraceEventPayload {
         thread_id: AgentThreadId,
         status: RolloutStatus,
     },
+    #[deprecated(note = "schema-compatible variant retained for existing trace bundles")]
     CodexTurnStarted {
         codex_turn_id: CodexTurnId,
         thread_id: AgentThreadId,
     },
+    #[deprecated(note = "schema-compatible variant retained for existing trace bundles")]
     CodexTurnEnded {
         codex_turn_id: CodexTurnId,
         status: ExecutionStatus,
@@ -120,9 +124,9 @@ pub enum RawTraceEventPayload {
     InferenceCancelled {
         inference_call_id: InferenceCallId,
         /// Provider transport request id, such as `x-request-id`, when observed
-        /// before Codex stopped consuming the stream.
+        /// before Sprite stopped consuming the stream.
         upstream_request_id: Option<String>,
-        /// Why Codex stopped consuming the provider stream before a terminal response event.
+        /// Why Sprite stopped consuming the provider stream before a terminal response event.
         reason: String,
         /// Completed output items observed before cancellation, if any.
         partial_response_payload: Option<RawPayloadRef>,
@@ -146,13 +150,13 @@ pub enum RawTraceEventPayload {
     },
     ToolCallRuntimeStarted {
         tool_call_id: ToolCallId,
-        /// Runtime/protocol observation for how Codex began executing the tool.
+        /// Runtime/protocol observation for how Sprite began executing the tool.
         runtime_payload: RawPayloadRef,
     },
     ToolCallRuntimeEnded {
         tool_call_id: ToolCallId,
         status: ExecutionStatus,
-        /// Runtime/protocol observation for how Codex finished executing the tool.
+        /// Runtime/protocol observation for how Sprite finished executing the tool.
         runtime_payload: RawPayloadRef,
     },
     ToolCallEnded {

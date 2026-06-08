@@ -290,7 +290,8 @@ pub enum ThreadItem {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[ts(optional)]
         mcp_app_resource_uri: Option<String>,
-        plugin_id: Option<String>,
+        #[serde(alias = "plugin_id")]
+        integration_id: Option<String>,
         result: Option<Box<McpToolCallResult>>,
         error: Option<McpToolCallError>,
         /// The duration of the MCP tool call in milliseconds.
@@ -852,7 +853,7 @@ impl From<CoreTurnItem> for ThreadItem {
                     status: McpToolCallStatus::from(mcp.status),
                     arguments: mcp.arguments,
                     mcp_app_resource_uri: mcp.mcp_app_resource_uri,
-                    plugin_id: mcp.plugin_id,
+                    integration_id: mcp.integration_id,
                     result: mcp.result.map(McpToolCallResult::from).map(Box::new),
                     error: mcp.error.map(McpToolCallError::from),
                     duration_ms,

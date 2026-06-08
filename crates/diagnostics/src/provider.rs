@@ -1,4 +1,5 @@
 use crate::config::OtelExporter;
+#[cfg(feature = "otlp-exporter")]
 use crate::config::OtelHttpProtocol;
 use crate::config::OtelSettings;
 use crate::metrics::MetricsClient;
@@ -12,21 +13,33 @@ use opentelemetry::global;
 use opentelemetry::trace::Span as _;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::LogExporter;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::OTEL_EXPORTER_OTLP_LOGS_TIMEOUT;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::OTEL_EXPORTER_OTLP_TRACES_TIMEOUT;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::Protocol;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::SpanExporter;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::WithExportConfig;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::WithHttpConfig;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::WithTonicConfig;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::tonic_types::metadata::MetadataMap;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_otlp::tonic_types::transport::ClientTlsConfig;
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::error::OTelSdkResult;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_sdk::runtime;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_sdk::trace::BatchSpanProcessor;
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use opentelemetry_sdk::trace::Span;
@@ -34,10 +47,17 @@ use opentelemetry_sdk::trace::SpanData;
 use opentelemetry_sdk::trace::SpanProcessor;
 use opentelemetry_sdk::trace::Tracer;
 use opentelemetry_sdk::trace::TracerProviderBuilder;
+#[cfg(feature = "otlp-exporter")]
 use opentelemetry_sdk::trace::span_processor_with_async_runtime::BatchSpanProcessor as TokioBatchSpanProcessor;
 use opentelemetry_semantic_conventions as semconv;
 use std::collections::BTreeMap;
 use std::error::Error;
+#[cfg(not(feature = "otlp-exporter"))]
+use std::io;
+#[cfg(not(feature = "otlp-exporter"))]
+use std::io::ErrorKind;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tracing::debug;
 use tracing_subscriber::Layer;
@@ -57,10 +77,17 @@ pub struct OtelProvider {
     pub tracer_provider: Option<SdkTracerProvider>,
     pub tracer: Option<Tracer>,
     pub metrics: Option<MetricsClient>,
+    shutdown_called: AtomicBool,
 }
 
 impl OtelProvider {
     pub fn shutdown(&self) {
+        if self
+            .shutdown_called
+            .swap(true, Ordering::AcqRel)
+        {
+            return;
+        }
         if let Some(tracer_provider) = &self.tracer_provider {
             let _ = tracer_provider.force_flush();
             let _ = tracer_provider.shutdown();
@@ -144,6 +171,7 @@ impl OtelProvider {
             tracer_provider,
             tracer,
             metrics,
+            shutdown_called: AtomicBool::new(false),
         }))
     }
 
@@ -190,16 +218,7 @@ impl OtelProvider {
 
 impl Drop for OtelProvider {
     fn drop(&mut self) {
-        if let Some(tracer_provider) = &self.tracer_provider {
-            let _ = tracer_provider.force_flush();
-            let _ = tracer_provider.shutdown();
-        }
-        if let Some(metrics) = &self.metrics {
-            let _ = metrics.shutdown();
-        }
-        if let Some(logger) = &self.logger {
-            let _ = logger.shutdown();
-        }
+        self.shutdown();
     }
 }
 
@@ -285,6 +304,22 @@ impl SpanProcessor for SpanAttributesProcessor {
     }
 }
 
+#[cfg(not(feature = "otlp-exporter"))]
+fn build_logger(
+    resource: &Resource,
+    exporter: &OtelExporter,
+) -> Result<SdkLoggerProvider, Box<dyn Error>> {
+    let builder = SdkLoggerProvider::builder().with_resource(resource.clone());
+
+    match crate::config::resolve_exporter(exporter) {
+        OtelExporter::None => Ok(builder.build()),
+        OtelExporter::OtlpGrpc { .. } | OtelExporter::OtlpHttp { .. } => {
+            Err(otlp_exporter_disabled_error())
+        }
+    }
+}
+
+#[cfg(feature = "otlp-exporter")]
 fn build_logger(
     resource: &Resource,
     exporter: &OtelExporter,
@@ -353,6 +388,21 @@ fn build_logger(
     Ok(builder.build())
 }
 
+#[cfg(not(feature = "otlp-exporter"))]
+fn build_tracer_provider(
+    resource: &Resource,
+    exporter: &OtelExporter,
+    span_attributes: BTreeMap<String, String>,
+) -> Result<SdkTracerProvider, Box<dyn Error>> {
+    match crate::config::resolve_exporter(exporter) {
+        OtelExporter::None => Ok(tracer_provider_builder(resource, span_attributes).build()),
+        OtelExporter::OtlpGrpc { .. } | OtelExporter::OtlpHttp { .. } => {
+            Err(otlp_exporter_disabled_error())
+        }
+    }
+}
+
+#[cfg(feature = "otlp-exporter")]
 fn build_tracer_provider(
     resource: &Resource,
     exporter: &OtelExporter,
@@ -446,6 +496,14 @@ fn build_tracer_provider(
     Ok(tracer_provider_builder(resource, span_attributes)
         .with_span_processor(processor)
         .build())
+}
+
+#[cfg(not(feature = "otlp-exporter"))]
+fn otlp_exporter_disabled_error() -> Box<dyn Error> {
+    Box::new(io::Error::new(
+        ErrorKind::InvalidInput,
+        "OTLP exporter support requires the diagnostics otlp-exporter feature",
+    ))
 }
 
 #[cfg(test)]

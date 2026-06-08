@@ -1,5 +1,7 @@
 //! Hot-path trace bundle writer.
 
+#![allow(deprecated)]
+
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::BufWriter;

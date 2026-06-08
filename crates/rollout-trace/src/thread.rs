@@ -5,6 +5,8 @@
 //! thread-local event methods here avoids repeatedly plumbing `thread_id`
 //! through session code.
 
+#![allow(deprecated)]
+
 use runtime_protocol::protocol::AgentStatus;
 use runtime_protocol::protocol::EventMsg;
 use runtime_protocol::protocol::SessionSource;
@@ -100,7 +102,7 @@ impl ThreadTraceContext {
 
     /// Starts a root thread trace from `SPRITE_ROLLOUT_TRACE_ROOT`, or disables tracing.
     ///
-    /// Trace startup is best-effort. A tracing failure must not make the Codex
+    /// Trace startup is best-effort. A tracing failure must not make the Sprite
     /// session unusable, because traces are diagnostic and can be enabled while
     /// debugging unrelated production failures.
     pub fn start_root_or_disabled(metadata: ThreadStartedTraceMetadata) -> Self {
@@ -213,7 +215,10 @@ impl ThreadTraceContext {
         });
     }
 
-    /// Emits typed Codex turn lifecycle events from protocol lifecycle events.
+    /// Emits typed runtime activation lifecycle events from protocol lifecycle events.
+    #[deprecated(
+        note = "schema-compatible name retained for existing trace bundles; use runtime activation terminology in new APIs"
+    )]
     pub fn record_codex_turn_event(&self, default_turn_id: &str, event: &EventMsg) {
         let ThreadTraceContextState::Enabled(context) = &self.state else {
             return;
@@ -233,7 +238,7 @@ impl ThreadTraceContext {
     ///
     /// These events are runtime observations on an already-dispatched tool. The
     /// dispatch trace records the caller-facing boundary; these payloads explain
-    /// what Codex did while executing that boundary.
+    /// what Sprite did while executing that boundary.
     pub fn record_tool_call_event(&self, codex_turn_id: impl Into<CodexTurnId>, event: &EventMsg) {
         let ThreadTraceContextState::Enabled(context) = &self.state else {
             return;
@@ -287,6 +292,9 @@ impl ThreadTraceContext {
     /// Most production turn lifecycle wiring lives outside this PR layer, but
     /// trace-focused integration tests need a small explicit hook so reducer
     /// inputs remain valid without exercising the full session loop.
+    #[deprecated(
+        note = "schema-compatible name retained for existing trace bundles; use runtime activation terminology in new APIs"
+    )]
     pub fn record_codex_turn_started(&self, codex_turn_id: impl Into<CodexTurnId>) {
         let ThreadTraceContextState::Enabled(context) = &self.state else {
             return;
@@ -349,7 +357,7 @@ impl ThreadTraceContext {
         ToolDispatchTraceContext::start(Arc::clone(&context.writer), invocation)
     }
 
-    /// Builds reusable inference trace context for one Codex turn.
+    /// Builds reusable inference trace context for one runtime activation.
     ///
     /// The returned context is intentionally not "an inference call" yet.
     /// Transport code owns retry/fallback attempts and calls `start_attempt`

@@ -21,11 +21,11 @@ utils-image = { workspace = true }
 utils-string = { workspace = true }
 encoding_rs = { workspace = true }
 globset = { workspace = true }
+http = { workspace = true }
 icu_decimal = { workspace = true }
 icu_locale_core = { workspace = true }
 icu_provider = { workspace = true, features = ["sync"] }
 quick-xml = { workspace = true, features = ["serialize"] }
-reqwest = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -46,8 +46,8 @@ wildmatch = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
-http = { workspace = true }
 pretty_assertions = { workspace = true }
+reqwest = { workspace = true }
 tempfile = { workspace = true }
 
 [package.metadata.cargo-shear]

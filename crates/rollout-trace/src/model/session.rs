@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -23,7 +25,7 @@ pub enum RolloutStatus {
     Aborted,
 }
 
-/// One Codex thread/session participating in the rollout.
+/// One Sprite thread/session participating in the rollout.
 ///
 /// Threads are agents in the multi-agent sense, but the root interactive
 /// session is represented by the same object. Runtime objects live in top-level
@@ -49,7 +51,7 @@ pub struct AgentThread {
     pub conversation_item_ids: Vec<ConversationItemId>,
 }
 
-/// Provenance for a traced Codex thread.
+/// Provenance for a traced Sprite thread.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum AgentOrigin {
@@ -95,11 +97,15 @@ pub enum ExecutionStatus {
     Aborted,
 }
 
-/// One activation of the Codex runtime for one thread.
+/// One activation of the Sprite runtime for one thread.
 ///
-/// A Codex turn groups protocol/runtime work for one thread activation.
+/// The `CodexTurn` name is retained only for trace bundle schema
+/// compatibility. It groups protocol/runtime work for one thread activation.
 /// It is not a user/assistant message pair; conversation belongs in
 /// `ConversationItem`.
+#[deprecated(
+    note = "schema-compatible name retained for existing trace bundles; use runtime activation terminology in new APIs"
+)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CodexTurn {
     pub codex_turn_id: CodexTurnId,

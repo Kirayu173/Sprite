@@ -132,7 +132,7 @@ pub struct Thread {
     pub cli_version: String,
     /// Origin of the thread (CLI, VSCode, direct exec, app-server, etc.).
     pub source: SessionSource,
-    /// Optional analytics source classification for this thread.
+    /// Optional local source classification for routing/restoring this thread.
     pub thread_source: Option<ThreadSource>,
     /// Optional random unique nickname assigned to an AgentControl-spawned sub-agent.
     pub agent_nickname: Option<String>,

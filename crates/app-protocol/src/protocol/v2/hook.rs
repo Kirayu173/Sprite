@@ -45,7 +45,7 @@ v2_enum_from_core!(
         User,
         Project,
         SessionFlags,
-        Plugin,
+        Integration,
         Requirements,
         ManagedConfig,
         LegacyConfigFile,

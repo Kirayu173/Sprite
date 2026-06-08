@@ -4,6 +4,8 @@ use std::path::PathBuf;
 
 use utils_absolute_path::AbsolutePathBuf;
 pub(crate) fn resolve_exporter(exporter: &OtelExporter) -> OtelExporter {
+    // Centralized for future config normalization while keeping call sites
+    // independent from raw settings ownership.
     exporter.clone()
 }
 

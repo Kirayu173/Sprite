@@ -98,6 +98,8 @@ pub const APPS_INSTRUCTIONS_OPEN_TAG: &str = "<apps_instructions>";
 pub const APPS_INSTRUCTIONS_CLOSE_TAG: &str = "</apps_instructions>";
 pub const SKILLS_INSTRUCTIONS_OPEN_TAG: &str = "<skills_instructions>";
 pub const SKILLS_INSTRUCTIONS_CLOSE_TAG: &str = "</skills_instructions>";
+/// Legacy wire-format compatibility tags for older plugin instruction blocks.
+/// New protocol surfaces should prefer app or MCP instruction tags.
 pub const PLUGINS_INSTRUCTIONS_OPEN_TAG: &str = "<plugins_instructions>";
 pub const PLUGINS_INSTRUCTIONS_CLOSE_TAG: &str = "</plugins_instructions>";
 pub const COLLABORATION_MODE_OPEN_TAG: &str = "<collaboration_mode>";
@@ -895,6 +897,7 @@ pub struct Event {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[ts(tag = "type")]
 #[strum(serialize_all = "snake_case")]
+#[allow(deprecated)]
 pub enum EventMsg {
     /// Error while executing a submission
     Error(ErrorEvent),
@@ -910,9 +913,15 @@ pub enum EventMsg {
     ModelReroute(ModelRerouteEvent),
 
     /// Backend recommends additional account verification for this turn.
+    ///
+    /// Retained only for protocol compatibility with providers that still emit
+    /// first-party verification metadata.
     ModelVerification(ModelVerificationEvent),
 
     /// Backend moderation metadata intended for first-party turn presentation.
+    ///
+    /// Retained only for protocol compatibility with providers that still emit
+    /// first-party moderation metadata.
     TurnModerationMetadata(TurnModerationMetadataEvent),
 
     /// Conversation history was compacted (either automatically or manually).
@@ -1120,7 +1129,8 @@ pub enum HookSource {
     User,
     Project,
     SessionFlags,
-    Plugin,
+    #[serde(alias = "plugin")]
+    Integration,
     Requirements,
     ManagedConfig,
     LegacyConfigFile,
@@ -1573,7 +1583,7 @@ pub struct TurnCompleteEvent {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, TS)]
 pub struct TurnStartedEvent {
     pub turn_id: String,
-    // Persist for rollout consumers that correlate turns with telemetry traces.
+    // Local rollout-trace correlation id. This is not an official telemetry handle.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub trace_id: Option<String>,
@@ -1698,49 +1708,47 @@ impl TokenUsageInfo {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, TS)]
 pub struct TokenCountEvent {
     pub info: Option<TokenUsageInfo>,
-    pub rate_limits: Option<RateLimitSnapshot>,
+    pub usage_limits: Option<UsageLimitSnapshot>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema, TS)]
-pub struct RateLimitSnapshot {
+pub struct UsageLimitSnapshot {
     pub limit_id: Option<String>,
     pub limit_name: Option<String>,
-    pub primary: Option<RateLimitWindow>,
-    pub secondary: Option<RateLimitWindow>,
-    pub credits: Option<CreditsSnapshot>,
-    pub individual_limit: Option<SpendControlLimitSnapshot>,
-    pub plan_type: Option<crate::PlanType>,
-    pub rate_limit_reached_type: Option<RateLimitReachedType>,
+    pub primary: Option<UsageLimitWindow>,
+    pub secondary: Option<UsageLimitWindow>,
+    pub kind: Option<UsageLimitKind>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(rename_all = "snake_case")]
-pub enum RateLimitReachedType {
-    RateLimitReached,
-    WorkspaceOwnerCreditsDepleted,
-    WorkspaceMemberCreditsDepleted,
-    WorkspaceOwnerUsageLimitReached,
-    WorkspaceMemberUsageLimitReached,
+pub enum UsageLimitKind {
+    ProviderLimitReached,
+    #[serde(alias = "account_limit_reached")]
+    SubscriptionLimitReached,
+    ProjectLimitReached,
+    Other,
 }
 
-impl FromStr for RateLimitReachedType {
+impl FromStr for UsageLimitKind {
     type Err = String;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
-            "rate_limit_reached" => Ok(Self::RateLimitReached),
-            "workspace_owner_credits_depleted" => Ok(Self::WorkspaceOwnerCreditsDepleted),
-            "workspace_member_credits_depleted" => Ok(Self::WorkspaceMemberCreditsDepleted),
-            "workspace_owner_usage_limit_reached" => Ok(Self::WorkspaceOwnerUsageLimitReached),
-            "workspace_member_usage_limit_reached" => Ok(Self::WorkspaceMemberUsageLimitReached),
-            other => Err(format!("unknown rate limit reached type: {other}")),
+            "provider_limit_reached" => Ok(Self::ProviderLimitReached),
+            "subscription_limit_reached" | "account_limit_reached" => {
+                Ok(Self::SubscriptionLimitReached)
+            }
+            "project_limit_reached" => Ok(Self::ProjectLimitReached),
+            "other" => Ok(Self::Other),
+            other => Err(format!("unknown usage limit kind: {other}")),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema, TS)]
-pub struct RateLimitWindow {
+pub struct UsageLimitWindow {
     /// Percentage (0-100) of the window that has been consumed.
     pub used_percent: f64,
     /// Rolling window duration, in minutes.
@@ -1749,21 +1757,6 @@ pub struct RateLimitWindow {
     /// Unix timestamp (seconds since epoch) when the window resets.
     #[ts(type = "number | null")]
     pub resets_at: Option<i64>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema, TS)]
-pub struct CreditsSnapshot {
-    pub has_credits: bool,
-    pub unlimited: bool,
-    pub balance: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema, TS)]
-pub struct SpendControlLimitSnapshot {
-    pub limit: String,
-    pub used: String,
-    pub remaining_percent: i32,
-    pub resets_at: i64,
 }
 
 // Includes prompts, tools and space to call compact.
@@ -1942,7 +1935,8 @@ pub struct McpToolCallBeginEvent {
     pub mcp_app_resource_uri: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
-    pub plugin_id: Option<String>,
+    #[serde(alias = "plugin_id")]
+    pub integration_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, TS, PartialEq)]
@@ -1955,7 +1949,8 @@ pub struct McpToolCallEndEvent {
     pub mcp_app_resource_uri: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
-    pub plugin_id: Option<String>,
+    #[serde(alias = "plugin_id")]
+    pub integration_id: Option<String>,
     #[ts(type = "string")]
     pub duration: Duration,
     /// Result of the tool call. Note this could be an error.
@@ -2483,7 +2478,7 @@ pub struct SessionMeta {
     pub cli_version: String,
     #[serde(default)]
     pub source: SessionSource,
-    /// Optional analytics source classification for this thread.
+    /// Optional local source classification for routing/restoring this thread.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thread_source: Option<ThreadSource>,
     /// Optional random unique nickname assigned to an AgentControl-spawned sub-agent.
@@ -3048,7 +3043,8 @@ pub struct McpStartupFailure {
 #[ts(rename_all = "snake_case")]
 pub enum McpAuthStatus {
     Unsupported,
-    NotLoggedIn,
+    #[serde(alias = "not_logged_in")]
+    Unauthenticated,
     BearerToken,
     OAuth,
 }
@@ -3057,7 +3053,7 @@ impl fmt::Display for McpAuthStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let text = match self {
             McpAuthStatus::Unsupported => "Unsupported",
-            McpAuthStatus::NotLoggedIn => "Not logged in",
+            McpAuthStatus::Unauthenticated => "Unauthenticated",
             McpAuthStatus::BearerToken => "Bearer token",
             McpAuthStatus::OAuth => "OAuth",
         };
@@ -3180,7 +3176,7 @@ pub struct SessionConfiguredEvent {
     pub forked_from_id: Option<ThreadId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_thread_id: Option<ThreadId>,
-    /// Optional analytics source classification for this thread.
+    /// Optional local source classification for routing/restoring this thread.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thread_source: Option<ThreadSource>,
 
@@ -3467,6 +3463,9 @@ pub enum TurnAbortReason {
     BudgetLimited,
 }
 
+// Sprite keeps these collab protocol events in Phase 1 because the existing
+// multi-agent UI/reducer path consumes them directly. Phase 6 owns any deeper
+// rename or replacement once the multi-agent runtime boundary is migrated.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema, TS)]
 pub struct CollabAgentSpawnBeginEvent {
     /// Identifier for the collab tool call.
@@ -4403,7 +4402,7 @@ mod tests {
                 tool: "tool".into(),
                 arguments: json!({"arg": "value"}),
                 mcp_app_resource_uri: Some("app://integration".into()),
-                plugin_id: Some("sample@test".into()),
+                integration_id: Some("sample@test".into()),
                 status: McpToolCallStatus::InProgress,
                 result: None,
                 error: None,
@@ -4422,7 +4421,7 @@ mod tests {
                     event.mcp_app_resource_uri.as_deref(),
                     Some("app://integration")
                 );
-                assert_eq!(event.plugin_id.as_deref(), Some("sample@test"));
+                assert_eq!(event.integration_id.as_deref(), Some("sample@test"));
             }
             _ => panic!("expected McpToolCallBegin event"),
         }
@@ -4510,7 +4509,7 @@ mod tests {
                 tool: "tool".into(),
                 arguments: json!({"arg": "value"}),
                 mcp_app_resource_uri: Some("app://integration".into()),
-                plugin_id: Some("sample@test".into()),
+                integration_id: Some("sample@test".into()),
                 status: McpToolCallStatus::Completed,
                 result: Some(CallToolResult {
                     content: vec![json!({"type": "text", "text": "ok"})],
@@ -4534,7 +4533,7 @@ mod tests {
                     event.mcp_app_resource_uri.as_deref(),
                     Some("app://integration")
                 );
-                assert_eq!(event.plugin_id.as_deref(), Some("sample@test"));
+                assert_eq!(event.integration_id.as_deref(), Some("sample@test"));
                 assert_eq!(event.duration, Duration::from_millis(42));
                 assert!(event.is_success());
             }

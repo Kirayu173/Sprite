@@ -3,6 +3,8 @@
 //! These types describe the deterministic replay output. They intentionally
 //! separate model-visible conversation from runtime/debug objects.
 
+#![allow(deprecated)]
+
 use std::collections::BTreeMap;
 
 use serde::Deserialize;
@@ -18,11 +20,14 @@ pub use conversation::*;
 pub use runtime::*;
 pub use session::*;
 
-/// Codex conversation/session UUID.
+/// Sprite conversation/session UUID.
 pub type AgentThreadId = String;
 /// Stable multi-agent routing path such as `/root` or `/root/search_docs`.
 pub type AgentPath = String;
-/// Runtime submission/activation UUID. This is not a chat turn.
+/// Deprecated schema-compatible runtime submission/activation UUID.
+#[deprecated(
+    note = "schema-compatible name retained for existing trace bundles; use runtime activation terminology in new APIs"
+)]
 pub type CodexTurnId = String;
 /// Reduced transcript item ID assigned by the trace reducer.
 pub type ConversationItemId = String;
@@ -38,7 +43,7 @@ pub type ModelVisibleCallId = String;
 pub type CodeModeRuntimeToolId = String;
 /// Reducer-owned ID for one model-authored `exec` JavaScript cell.
 pub type CodeCellId = String;
-/// Process/session ID returned by Codex's terminal runtime.
+/// Process/session ID returned by Sprite's terminal runtime.
 pub type TerminalId = String;
 /// Reducer-owned ID for one command/write/poll operation against a terminal.
 pub type TerminalOperationId = String;
@@ -51,13 +56,13 @@ pub type EdgeId = String;
 /// Reducer-owned ID for request/log correlation metadata.
 pub type CorrelationId = String;
 
-/// Canonical reduced graph for one Codex rollout.
+/// Canonical reduced graph for one Sprite rollout.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RolloutTrace {
     pub schema_version: u32,
     /// Unique identity for this trace capture.
     ///
-    /// `rollout_id` names the Codex rollout/session being observed. `trace_id`
+    /// `rollout_id` names the Sprite rollout/session being observed. `trace_id`
     /// names the diagnostic artifact produced for that rollout, which keeps
     /// storage/replay identity separate from the product-level session identity.
     pub trace_id: String,

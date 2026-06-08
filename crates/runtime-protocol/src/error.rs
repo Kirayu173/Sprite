@@ -1,20 +1,19 @@
 use crate::ThreadId;
-use crate::auth::PlanType;
-pub use crate::auth::RefreshTokenFailedError;
-pub use crate::auth::RefreshTokenFailedReason;
+pub use crate::auth::ProviderAuthError;
+pub use crate::auth::ProviderAuthErrorReason;
 use crate::exec_output::ExecToolCallOutput;
 use crate::network_policy::NetworkPolicyDecisionPayload;
 use crate::protocol::ErrorEvent;
-use crate::protocol::RateLimitReachedType;
-use crate::protocol::RateLimitSnapshot;
 use crate::protocol::RuntimeErrorInfo;
 use crate::protocol::TruncationPolicy;
+use crate::protocol::UsageLimitKind;
+use crate::protocol::UsageLimitSnapshot;
 use async_utils::CancelErr;
 use chrono::DateTime;
 use chrono::Datelike;
 use chrono::Local;
 use chrono::Utc;
-use reqwest::StatusCode;
+use http::StatusCode;
 use serde_json;
 use std::io;
 use std::time::Duration;
@@ -95,7 +94,7 @@ pub enum RuntimeError {
     #[error("Image poisoning")]
     InvalidImageRequest(),
     #[error("{0}")]
-    UsageLimitReached(UsageLimitReachedError),
+    UsageLimit(UsageLimitError),
     #[error("Selected model is at capacity. Please try a different model.")]
     ServerOverloaded,
     #[error("{message}")]
@@ -104,10 +103,8 @@ pub enum RuntimeError {
     ResponseStreamFailed(ResponseStreamFailed),
     #[error("{0}")]
     ConnectionFailed(ConnectionFailedError),
-    #[error("Quota exceeded. Check your plan and billing details.")]
-    QuotaExceeded,
     #[error("Usage for the selected account or provider is not enabled for this operation.")]
-    UsageNotIncluded,
+    UsageNotEnabled,
     #[error("We're currently experiencing high demand, which may cause temporary errors.")]
     InternalServerError,
     /// Retry limit exceeded.
@@ -124,7 +121,7 @@ pub enum RuntimeError {
     #[error("unsupported operation: {0}")]
     UnsupportedOperation(String),
     #[error("{0}")]
-    RefreshTokenFailed(RefreshTokenFailedError),
+    ProviderAuthFailed(ProviderAuthError),
     #[error("Fatal error: {0}")]
     Fatal(String),
     // -----------------------------------------------------------------
@@ -153,11 +150,10 @@ impl RuntimeError {
             | RuntimeError::Interrupted
             | RuntimeError::EnvVar(_)
             | RuntimeError::Fatal(_)
-            | RuntimeError::UsageNotIncluded
-            | RuntimeError::QuotaExceeded
+            | RuntimeError::UsageNotEnabled
             | RuntimeError::InvalidImageRequest()
             | RuntimeError::InvalidRequest(_)
-            | RuntimeError::RefreshTokenFailed(_)
+            | RuntimeError::ProviderAuthFailed(_)
             | RuntimeError::UnsupportedOperation(_)
             | RuntimeError::Sandbox(_)
             | RuntimeError::SandboxExecutableNotProvided
@@ -167,7 +163,7 @@ impl RuntimeError {
             | RuntimeError::AgentLimitReached { .. }
             | RuntimeError::Spawn
             | RuntimeError::SessionConfiguredNotFirstEvent
-            | RuntimeError::UsageLimitReached(_)
+            | RuntimeError::UsageLimit(_)
             | RuntimeError::ServerOverloaded
             | RuntimeError::CyberPolicy { .. } => false,
             RuntimeError::Stream(..)
@@ -195,9 +191,7 @@ impl RuntimeError {
     pub fn to_runtime_protocol_error(&self) -> RuntimeErrorInfo {
         match self {
             RuntimeError::ContextWindowExceeded => RuntimeErrorInfo::ContextWindowExceeded,
-            RuntimeError::UsageLimitReached(_)
-            | RuntimeError::QuotaExceeded
-            | RuntimeError::UsageNotIncluded => RuntimeErrorInfo::UsageLimitExceeded,
+            RuntimeError::UsageLimit(_) => RuntimeErrorInfo::UsageLimitExceeded,
             RuntimeError::ServerOverloaded => RuntimeErrorInfo::ServerOverloaded,
             RuntimeError::CyberPolicy { .. } => RuntimeErrorInfo::CyberPolicy,
             RuntimeError::RetryLimit(_) => RuntimeErrorInfo::ResponseTooManyFailedAttempts {
@@ -211,7 +205,7 @@ impl RuntimeError {
                     http_status_code: self.http_status_code_value(),
                 }
             }
-            RuntimeError::RefreshTokenFailed(_) => RuntimeErrorInfo::Unauthorized,
+            RuntimeError::ProviderAuthFailed(_) => RuntimeErrorInfo::Unauthorized,
             RuntimeError::SessionConfiguredNotFirstEvent
             | RuntimeError::InternalServerError
             | RuntimeError::InternalAgentDied => RuntimeErrorInfo::InternalServerError,
@@ -239,8 +233,8 @@ impl RuntimeError {
         let http_status_code = match self {
             RuntimeError::RetryLimit(err) => Some(err.status),
             RuntimeError::UnexpectedStatus(err) => Some(err.status),
-            RuntimeError::ConnectionFailed(err) => err.source.status(),
-            RuntimeError::ResponseStreamFailed(err) => err.source.status(),
+            RuntimeError::ConnectionFailed(err) => err.source.status,
+            RuntimeError::ResponseStreamFailed(err) => err.source.status,
             _ => None,
         };
         http_status_code.as_ref().map(StatusCode::as_u16)
@@ -249,7 +243,7 @@ impl RuntimeError {
 
 #[derive(Debug)]
 pub struct ConnectionFailedError {
-    pub source: reqwest::Error,
+    pub source: RuntimeHttpError,
 }
 
 impl std::fmt::Display for ConnectionFailedError {
@@ -260,7 +254,7 @@ impl std::fmt::Display for ConnectionFailedError {
 
 #[derive(Debug)]
 pub struct ResponseStreamFailed {
-    pub source: reqwest::Error,
+    pub source: RuntimeHttpError,
     pub request_id: Option<String>,
 }
 
@@ -277,6 +271,29 @@ impl std::fmt::Display for ResponseStreamFailed {
         )
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct RuntimeHttpError {
+    pub message: String,
+    pub status: Option<StatusCode>,
+}
+
+impl RuntimeHttpError {
+    pub fn new(message: impl Into<String>, status: Option<StatusCode>) -> Self {
+        Self {
+            message: message.into(),
+            status,
+        }
+    }
+}
+
+impl std::fmt::Display for RuntimeHttpError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for RuntimeHttpError {}
 
 #[derive(Debug)]
 pub struct UnexpectedResponseError {
@@ -424,19 +441,16 @@ impl std::fmt::Display for RetryLimitReachedError {
 }
 
 #[derive(Debug)]
-pub struct UsageLimitReachedError {
-    pub plan_type: Option<PlanType>,
+pub struct UsageLimitError {
     pub resets_at: Option<DateTime<Utc>>,
-    pub rate_limits: Option<Box<RateLimitSnapshot>>,
-    /// Deprecated: retained for wire compatibility until phase 4 moves upgrade flow copy to runtime.
-    pub promo_message: Option<String>,
-    pub rate_limit_reached_type: Option<RateLimitReachedType>,
+    pub limits: Option<Box<UsageLimitSnapshot>>,
+    pub kind: Option<UsageLimitKind>,
 }
 
-impl std::fmt::Display for UsageLimitReachedError {
+impl std::fmt::Display for UsageLimitError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(limit_name) = self
-            .rate_limits
+            .limits
             .as_ref()
             .and_then(|snapshot| snapshot.limit_name.as_deref())
             .map(str::trim)
@@ -462,9 +476,9 @@ fn usage_limit_message(limit_name: Option<&str>, resets_at: Option<&DateTime<Utc
 
     if let Some(resets_at) = resets_at {
         let formatted = format_retry_timestamp(resets_at);
-        format!("{subject} Try again at {formatted} or check your plan.")
+        format!("{subject} Try again at {formatted}.")
     } else {
-        format!("{subject} Try again later or check your plan.")
+        format!("{subject} Try again later.")
     }
 }
 

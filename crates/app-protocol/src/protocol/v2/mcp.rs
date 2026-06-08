@@ -17,7 +17,7 @@ use ts_rs::TS;
 v2_enum_from_core!(
     pub enum McpAuthStatus from runtime_protocol::protocol::McpAuthStatus {
         Unsupported,
-        NotLoggedIn,
+        Unauthenticated,
         BearerToken,
         OAuth
     }

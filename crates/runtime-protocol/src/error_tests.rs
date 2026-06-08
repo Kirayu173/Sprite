@@ -1,7 +1,6 @@
 use super::*;
-use crate::auth::{KnownTier, PlanType};
 use crate::exec_output::StreamOutput;
-use crate::protocol::RateLimitWindow;
+use crate::protocol::UsageLimitWindow;
 use chrono::DateTime;
 use chrono::Duration as ChronoDuration;
 use chrono::TimeZone;
@@ -13,7 +12,7 @@ use reqwest::ResponseBuilderExt;
 use reqwest::StatusCode;
 use reqwest::Url;
 
-fn rate_limit_snapshot() -> RateLimitSnapshot {
+fn usage_limit_snapshot() -> UsageLimitSnapshot {
     let primary_reset_at = Utc
         .with_ymd_and_hms(2024, 1, 1, 1, 0, 0)
         .unwrap()
@@ -22,23 +21,20 @@ fn rate_limit_snapshot() -> RateLimitSnapshot {
         .with_ymd_and_hms(2024, 1, 1, 2, 0, 0)
         .unwrap()
         .timestamp();
-    RateLimitSnapshot {
+    UsageLimitSnapshot {
         limit_id: None,
         limit_name: None,
-        primary: Some(RateLimitWindow {
+        primary: Some(UsageLimitWindow {
             used_percent: 50.0,
             window_minutes: Some(60),
             resets_at: Some(primary_reset_at),
         }),
-        secondary: Some(RateLimitWindow {
+        secondary: Some(UsageLimitWindow {
             used_percent: 30.0,
             window_minutes: Some(120),
             resets_at: Some(secondary_reset_at),
         }),
-        credits: None,
-        individual_limit: None,
-        plan_type: None,
-        rate_limit_reached_type: None,
+        kind: None,
     }
 }
 
@@ -52,42 +48,37 @@ fn with_now_override<T>(now: DateTime<Utc>, f: impl FnOnce() -> T) -> T {
 }
 
 #[test]
-fn usage_limit_reached_error_formats_premium_plan() {
-    let err = UsageLimitReachedError {
-        plan_type: Some(PlanType::Known(KnownTier::Premium)),
+fn usage_limit_error_formats_default_message() {
+    let err = UsageLimitError {
         resets_at: None,
-        rate_limits: Some(Box::new(rate_limit_snapshot())),
-        promo_message: None,
-        rate_limit_reached_type: None,
+        limits: Some(Box::new(usage_limit_snapshot())),
+        kind: None,
     };
     assert_eq!(
         err.to_string(),
-        "You've hit your usage limit. Try again later or check your plan."
+        "You've hit your usage limit. Try again later."
     );
 }
 
 #[test]
-fn usage_limit_reached_error_formats_rate_limit_reached_types() {
+fn usage_limit_error_formats_usage_limit_kinds() {
     let cases = [
-        RateLimitReachedType::RateLimitReached,
-        RateLimitReachedType::WorkspaceOwnerCreditsDepleted,
-        RateLimitReachedType::WorkspaceMemberCreditsDepleted,
-        RateLimitReachedType::WorkspaceOwnerUsageLimitReached,
-        RateLimitReachedType::WorkspaceMemberUsageLimitReached,
+        UsageLimitKind::ProviderLimitReached,
+        UsageLimitKind::SubscriptionLimitReached,
+        UsageLimitKind::ProjectLimitReached,
+        UsageLimitKind::Other,
     ];
 
-    for rate_limit_reached_type in cases {
-        let err = UsageLimitReachedError {
-            plan_type: Some(PlanType::Known(KnownTier::Premium)),
+    for kind in cases {
+        let err = UsageLimitError {
             resets_at: None,
-            rate_limits: Some(Box::new(rate_limit_snapshot())),
-            promo_message: None,
-            rate_limit_reached_type: Some(rate_limit_reached_type),
+            limits: Some(Box::new(usage_limit_snapshot())),
+            kind: Some(kind),
         };
 
         assert_eq!(
             err.to_string(),
-            "You've hit your usage limit. Try again later or check your plan."
+            "You've hit your usage limit. Try again later."
         );
     }
 }
@@ -161,7 +152,7 @@ fn to_error_event_handles_response_stream_failed() {
         .unwrap();
     let source = Response::from(response).error_for_status_ref().unwrap_err();
     let err = RuntimeError::ResponseStreamFailed(ResponseStreamFailed {
-        source,
+        source: RuntimeHttpError::new(source.to_string(), source.status()),
         request_id: Some("req-123".to_string()),
     });
 
@@ -200,146 +191,30 @@ fn sandbox_denied_reports_exit_code_when_no_output_available() {
 }
 
 #[test]
-fn usage_limit_reached_error_formats_free_plan() {
-    let err = UsageLimitReachedError {
-        plan_type: Some(PlanType::Known(KnownTier::Free)),
-        resets_at: None,
-        rate_limits: Some(Box::new(rate_limit_snapshot())),
-        promo_message: None,
-        rate_limit_reached_type: None,
-    };
-    assert_eq!(
-        err.to_string(),
-        "You've hit your usage limit. Try again later or check your plan."
-    );
-}
-
-#[test]
-fn usage_limit_reached_error_formats_go_plan() {
-    let err = UsageLimitReachedError {
-        plan_type: Some(PlanType::Known(KnownTier::Individual)),
-        resets_at: None,
-        rate_limits: Some(Box::new(rate_limit_snapshot())),
-        promo_message: None,
-        rate_limit_reached_type: None,
-    };
-    assert_eq!(
-        err.to_string(),
-        "You've hit your usage limit. Try again later or check your plan."
-    );
-}
-
-#[test]
 fn usage_limit_reached_error_formats_default_when_none() {
-    let err = UsageLimitReachedError {
-        plan_type: None,
+    let err = UsageLimitError {
         resets_at: None,
-        rate_limits: Some(Box::new(rate_limit_snapshot())),
-        promo_message: None,
-        rate_limit_reached_type: None,
+        limits: Some(Box::new(usage_limit_snapshot())),
+        kind: None,
     };
     assert_eq!(
         err.to_string(),
-        "You've hit your usage limit. Try again later or check your plan."
+        "You've hit your usage limit. Try again later."
     );
 }
 
 #[test]
-fn usage_limit_reached_error_formats_team_plan() {
+fn usage_limit_error_formats_reset_time() {
     let base = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let resets_at = base + ChronoDuration::hours(1);
     with_now_override(base, move || {
         let expected_time = format_retry_timestamp(&resets_at);
-        let err = UsageLimitReachedError {
-            plan_type: Some(PlanType::Known(KnownTier::Team)),
+        let err = UsageLimitError {
             resets_at: Some(resets_at),
-            rate_limits: Some(Box::new(rate_limit_snapshot())),
-            promo_message: None,
-            rate_limit_reached_type: None,
+            limits: Some(Box::new(usage_limit_snapshot())),
+            kind: None,
         };
-        let expected = format!(
-            "You've hit your usage limit. Try again at {expected_time} or check your plan."
-        );
-        assert_eq!(err.to_string(), expected);
-    });
-}
-
-#[test]
-fn usage_limit_reached_error_formats_business_plan_without_reset() {
-    let err = UsageLimitReachedError {
-        plan_type: Some(PlanType::Known(KnownTier::Business)),
-        resets_at: None,
-        rate_limits: Some(Box::new(rate_limit_snapshot())),
-        promo_message: None,
-        rate_limit_reached_type: None,
-    };
-    assert_eq!(
-        err.to_string(),
-        "You've hit your usage limit. Try again later or check your plan."
-    );
-}
-
-#[test]
-fn usage_limit_reached_error_formats_business_metered_plan() {
-    let err = UsageLimitReachedError {
-        plan_type: Some(PlanType::Known(KnownTier::BusinessMetered)),
-        resets_at: None,
-        rate_limits: Some(Box::new(rate_limit_snapshot())),
-        promo_message: None,
-        rate_limit_reached_type: None,
-    };
-    assert_eq!(
-        err.to_string(),
-        "You've hit your usage limit. Try again later or check your plan."
-    );
-}
-
-#[test]
-fn usage_limit_reached_error_formats_enterprise_metered_plan() {
-    let err = UsageLimitReachedError {
-        plan_type: Some(PlanType::Known(KnownTier::EnterpriseMetered)),
-        resets_at: None,
-        rate_limits: Some(Box::new(rate_limit_snapshot())),
-        promo_message: None,
-        rate_limit_reached_type: None,
-    };
-    assert_eq!(
-        err.to_string(),
-        "You've hit your usage limit. Try again later or check your plan."
-    );
-}
-
-#[test]
-fn usage_limit_reached_error_formats_default_for_other_plans() {
-    let err = UsageLimitReachedError {
-        plan_type: Some(PlanType::Known(KnownTier::Enterprise)),
-        resets_at: None,
-        rate_limits: Some(Box::new(rate_limit_snapshot())),
-        promo_message: None,
-        rate_limit_reached_type: None,
-    };
-    assert_eq!(
-        err.to_string(),
-        "You've hit your usage limit. Try again later or check your plan."
-    );
-}
-
-#[test]
-fn usage_limit_reached_error_formats_pro_plan_with_reset() {
-    let base = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-    let resets_at = base + ChronoDuration::hours(1);
-    with_now_override(base, move || {
-        let expected_time = format_retry_timestamp(&resets_at);
-        let err = UsageLimitReachedError {
-            plan_type: Some(PlanType::Known(KnownTier::Professional)),
-            resets_at: Some(resets_at),
-            rate_limits: Some(Box::new(rate_limit_snapshot())),
-            promo_message: None,
-            rate_limit_reached_type: None,
-        };
-        let expected = format!(
-            "You've hit your usage limit. Try again at {expected_time} or check your plan."
-        );
+        let expected = format!("You've hit your usage limit. Try again at {expected_time}.");
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -350,22 +225,17 @@ fn usage_limit_reached_error_hides_upsell_for_non_default_limit_name() {
     let resets_at = base + ChronoDuration::hours(1);
     with_now_override(base, move || {
         let expected_time = format_retry_timestamp(&resets_at);
-        let err = UsageLimitReachedError {
-            plan_type: Some(PlanType::Known(KnownTier::Premium)),
+        let err = UsageLimitError {
             resets_at: Some(resets_at),
-            rate_limits: Some(Box::new(RateLimitSnapshot {
+            limits: Some(Box::new(UsageLimitSnapshot {
                 limit_id: Some("usage_other".to_string()),
                 limit_name: Some("usage_other".to_string()),
-                ..rate_limit_snapshot()
+                ..usage_limit_snapshot()
             })),
-            promo_message: Some(
-                "Visit https://sprite.dev/settings/usage to purchase more credits".to_string(),
-            ),
-            rate_limit_reached_type: None,
+            kind: None,
         };
-        let expected = format!(
-            "You've hit your usage limit for usage_other. Try again at {expected_time} or check your plan."
-        );
+        let expected =
+            format!("You've hit your usage limit for usage_other. Try again at {expected_time}.");
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -376,16 +246,12 @@ fn usage_limit_reached_includes_minutes_when_available() {
     let resets_at = base + ChronoDuration::minutes(5);
     with_now_override(base, move || {
         let expected_time = format_retry_timestamp(&resets_at);
-        let err = UsageLimitReachedError {
-            plan_type: None,
+        let err = UsageLimitError {
             resets_at: Some(resets_at),
-            rate_limits: Some(Box::new(rate_limit_snapshot())),
-            promo_message: None,
-            rate_limit_reached_type: None,
+            limits: Some(Box::new(usage_limit_snapshot())),
+            kind: None,
         };
-        let expected = format!(
-            "You've hit your usage limit. Try again at {expected_time} or check your plan."
-        );
+        let expected = format!("You've hit your usage limit. Try again at {expected_time}.");
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -518,16 +384,12 @@ fn usage_limit_reached_includes_hours_and_minutes() {
     let resets_at = base + ChronoDuration::hours(3) + ChronoDuration::minutes(32);
     with_now_override(base, move || {
         let expected_time = format_retry_timestamp(&resets_at);
-        let err = UsageLimitReachedError {
-            plan_type: Some(PlanType::Known(KnownTier::Premium)),
+        let err = UsageLimitError {
             resets_at: Some(resets_at),
-            rate_limits: Some(Box::new(rate_limit_snapshot())),
-            promo_message: None,
-            rate_limit_reached_type: None,
+            limits: Some(Box::new(usage_limit_snapshot())),
+            kind: None,
         };
-        let expected = format!(
-            "You've hit your usage limit. Try again at {expected_time} or check your plan."
-        );
+        let expected = format!("You've hit your usage limit. Try again at {expected_time}.");
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -539,16 +401,12 @@ fn usage_limit_reached_includes_days_hours_minutes() {
         base + ChronoDuration::days(2) + ChronoDuration::hours(3) + ChronoDuration::minutes(5);
     with_now_override(base, move || {
         let expected_time = format_retry_timestamp(&resets_at);
-        let err = UsageLimitReachedError {
-            plan_type: None,
+        let err = UsageLimitError {
             resets_at: Some(resets_at),
-            rate_limits: Some(Box::new(rate_limit_snapshot())),
-            promo_message: None,
-            rate_limit_reached_type: None,
+            limits: Some(Box::new(usage_limit_snapshot())),
+            kind: None,
         };
-        let expected = format!(
-            "You've hit your usage limit. Try again at {expected_time} or check your plan."
-        );
+        let expected = format!("You've hit your usage limit. Try again at {expected_time}.");
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -559,38 +417,12 @@ fn usage_limit_reached_less_than_minute() {
     let resets_at = base + ChronoDuration::seconds(30);
     with_now_override(base, move || {
         let expected_time = format_retry_timestamp(&resets_at);
-        let err = UsageLimitReachedError {
-            plan_type: None,
+        let err = UsageLimitError {
             resets_at: Some(resets_at),
-            rate_limits: Some(Box::new(rate_limit_snapshot())),
-            promo_message: None,
-            rate_limit_reached_type: None,
+            limits: Some(Box::new(usage_limit_snapshot())),
+            kind: None,
         };
-        let expected = format!(
-            "You've hit your usage limit. Try again at {expected_time} or check your plan."
-        );
-        assert_eq!(err.to_string(), expected);
-    });
-}
-
-#[test]
-fn usage_limit_reached_with_promo_message() {
-    let base = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-    let resets_at = base + ChronoDuration::seconds(30);
-    with_now_override(base, move || {
-        let expected_time = format_retry_timestamp(&resets_at);
-        let err = UsageLimitReachedError {
-            plan_type: None,
-            resets_at: Some(resets_at),
-            rate_limits: Some(Box::new(rate_limit_snapshot())),
-            promo_message: Some(
-                "To continue using Sprite, start a free trial of <PLAN> today".to_string(),
-            ),
-            rate_limit_reached_type: None,
-        };
-        let expected = format!(
-            "You've hit your usage limit. Try again at {expected_time} or check your plan."
-        );
+        let expected = format!("You've hit your usage limit. Try again at {expected_time}.");
         assert_eq!(err.to_string(), expected);
     });
 }

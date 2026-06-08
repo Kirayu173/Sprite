@@ -4,6 +4,8 @@
 //! event schema, payload shape, and no-op behavior, so core only adapts its
 //! domain objects into the small request/result structs defined here.
 
+#![allow(deprecated)]
+
 use std::fmt::Display;
 use std::sync::Arc;
 
@@ -53,7 +55,7 @@ struct EnabledToolDispatchTraceContext {
     tool_call_id: ToolCallId,
 }
 
-/// Core-facing request data for the canonical Codex tool boundary.
+/// Core-facing request data for the canonical runtime tool boundary.
 pub struct ToolDispatchInvocation {
     pub thread_id: AgentThreadId,
     pub codex_turn_id: CodexTurnId,
@@ -105,7 +107,7 @@ pub enum ToolDispatchResult {
     CodeModeResponse { value: JsonValue },
 }
 
-/// Raw invocation payload for the canonical Codex tool boundary.
+/// Raw invocation payload for the canonical runtime tool boundary.
 #[derive(Serialize)]
 struct DispatchedToolTraceRequest<'a> {
     tool_name: &'a str,

@@ -5,6 +5,8 @@
 //! lifecycle event policy inside the trace crate while core carries a compact,
 //! no-op capable handle through execution and waits.
 
+#![allow(deprecated)]
+
 use std::sync::Arc;
 
 use serde::Serialize;

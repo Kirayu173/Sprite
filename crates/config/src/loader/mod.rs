@@ -745,17 +745,7 @@ fn project_ignored_config_keys_warning(
     dot_sprite_folder: &AbsolutePathBuf,
     ignored_keys: &[String],
 ) -> String {
-    let config_path = dot_sprite_folder.join(CONFIG_TOML_FILE);
-    let ignored_keys = ignored_keys.join(", ");
-    format!(
-        concat!(
-            "Ignored unsupported project-local config keys in {config_path}: {ignored_keys}. ",
-            "If you want these settings to apply, manually set them in your ",
-            "user-level config.toml."
-        ),
-        config_path = config_path.display(),
-        ignored_keys = ignored_keys,
-    )
+    crate::project_ignored_config_keys_warning(dot_sprite_folder, ignored_keys).message
 }
 
 async fn project_trust_context(

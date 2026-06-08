@@ -3,8 +3,10 @@ pub(crate) mod config;
 pub mod doctor;
 pub(crate) mod metrics;
 pub(crate) mod provider;
+mod sink;
 pub(crate) mod trace_context;
 
+#[cfg(feature = "otlp-exporter")]
 mod otlp;
 mod targets;
 
@@ -19,6 +21,10 @@ pub use crate::metrics::runtime_metrics::RuntimeMetricsSummary;
 pub use crate::metrics::timer::Timer;
 pub use crate::metrics::*;
 pub use crate::provider::OtelProvider;
+pub use crate::sink::DiagnosticsEvent;
+pub use crate::sink::DiagnosticsLevel;
+pub use crate::sink::DiagnosticsSink;
+pub use crate::sink::LocalLogDiagnosticsSink;
 pub use crate::trace_context::context_from_w3c_trace_context;
 pub use crate::trace_context::current_span_trace_id;
 pub use crate::trace_context::current_span_w3c_trace_context;

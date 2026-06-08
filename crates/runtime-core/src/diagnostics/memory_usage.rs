@@ -8,5 +8,6 @@
 pub struct MemoryUsageDiagnostics;
 
 impl MemoryUsageDiagnostics {
+    /// Currently a no-op; will be implemented when tool execution is migrated.
     pub fn record_tool_read(&self, _success: bool) {}
 }

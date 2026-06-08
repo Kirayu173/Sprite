@@ -21,6 +21,7 @@ pub enum MetricsError {
     NegativeCounterIncrement { name: String, inc: i64 },
 
     #[error("failed to build OTLP metrics exporter")]
+    #[cfg(feature = "otlp-exporter")]
     ExporterBuild {
         #[source]
         source: opentelemetry_otlp::ExporterBuildError,
