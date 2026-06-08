@@ -1,6 +1,7 @@
 pub mod app_server_tracing;
 pub(crate) mod config;
 pub mod doctor;
+mod local;
 pub(crate) mod metrics;
 pub(crate) mod provider;
 mod sink;
@@ -15,6 +16,10 @@ pub use crate::config::OtelHttpProtocol;
 pub use crate::config::OtelSettings;
 pub use crate::config::OtelTlsConfig;
 pub use crate::config::validate_span_attributes;
+pub use crate::local::LocalLogFormat;
+pub use crate::local::LocalTracingConfig;
+pub use crate::local::init_local_tracing;
+pub use crate::local::local_env_filter;
 use crate::metrics::Result as MetricsResult;
 pub use crate::metrics::global as global_metrics;
 pub use crate::metrics::runtime_metrics::RuntimeMetricTotals;

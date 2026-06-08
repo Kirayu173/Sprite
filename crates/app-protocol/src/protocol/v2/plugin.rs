@@ -267,7 +267,7 @@ pub struct HookErrorInfo {
 pub struct PluginCatalogEntry {
     pub name: String,
     /// Local catalog file path when the catalog is backed by a local file.
-    /// Remote-only catalog catalogs do not have a local path.
+    /// Generated or in-memory catalogs do not have a local path.
     pub path: Option<AbsolutePathBuf>,
     pub interface: Option<CatalogInterface>,
     pub plugins: Vec<PluginSummary>,
@@ -296,7 +296,7 @@ pub enum PluginInstallPolicy {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, TS)]
 #[ts(export_to = "v2/")]
-pub enum PluginAuthPolicy {
+pub enum PluginSetupPolicy {
     #[serde(rename = "ON_INSTALL")]
     #[ts(rename = "ON_INSTALL")]
     OnInstall,
@@ -308,10 +308,7 @@ pub enum PluginAuthPolicy {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default, JsonSchema, TS)]
 #[ts(export_to = "v2/")]
 pub enum PluginAvailability {
-    /// Plugin-service currently sends `"ENABLED"` for available remote plugins.
-    /// app-server exposes `"AVAILABLE"` in its API; the alias keeps
-    /// decoding compatible with that upstream response.
-    #[serde(rename = "AVAILABLE", alias = "ENABLED")]
+    #[serde(rename = "AVAILABLE")]
     #[ts(rename = "AVAILABLE")]
     #[default]
     Available,
@@ -333,7 +330,7 @@ pub struct PluginSummary {
     pub installed: bool,
     pub enabled: bool,
     pub install_policy: PluginInstallPolicy,
-    pub auth_policy: PluginAuthPolicy,
+    pub setup_policy: PluginSetupPolicy,
     /// Availability state for installing and using the plugin.
     #[serde(default)]
     pub availability: PluginAvailability,
@@ -451,7 +448,7 @@ pub struct PluginInstallParams {
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
 pub struct PluginInstallResponse {
-    pub auth_policy: PluginAuthPolicy,
+    pub setup_policy: PluginSetupPolicy,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]

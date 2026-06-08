@@ -338,6 +338,16 @@ impl TypeVisitor for TypeScriptFixtureCollector<'_> {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+    use tempfile::TempDir;
+
+    fn generated_schema_manifest(schema_root: &Path) -> Result<Vec<String>> {
+        let mut entries = Vec::new();
+        for (rel, _) in read_schema_fixture_tree(schema_root)? {
+            let rel = rel.to_string_lossy().replace('\\', "/");
+            entries.push(rel);
+        }
+        Ok(entries)
+    }
 
     #[test]
     fn canonicalize_json_sorts_string_arrays() {
@@ -357,5 +367,21 @@ mod tests {
             {"$ref": "#/definitions/B"}
         ]);
         assert_eq!(canonicalize_json(&value), expected);
+    }
+
+    #[test]
+    fn schema_manifest_matches_generated_output() -> Result<()> {
+        let generated_root = TempDir::new()?;
+        write_schema_fixtures(generated_root.path(), None)?;
+        let mut actual = generated_schema_manifest(generated_root.path())?;
+        let mut expected = include_str!("../schema-manifest.txt")
+            .lines()
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        actual.sort();
+        expected.sort();
+
+        assert_eq!(actual, expected);
+        Ok(())
     }
 }

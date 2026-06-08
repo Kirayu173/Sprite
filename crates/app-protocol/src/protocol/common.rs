@@ -1332,9 +1332,9 @@ server_notification_definitions! {
     /// Deprecated: Use `ContextCompaction` item type instead.
     ContextCompacted => "thread/compacted" (v2::ContextCompactedNotification),
     ModelRerouted => "model/rerouted" (v2::ModelReroutedNotification),
-    ModelVerification => "model/verification" (v2::ModelVerificationNotification),
-    #[experimental("turn/moderationMetadata")]
-    TurnModerationMetadata => "turn/moderationMetadata" (v2::TurnModerationMetadataNotification),
+    ProviderPolicyCheck => "provider/policyCheck" (v2::ProviderPolicyCheckNotification),
+    #[experimental("provider/policyMetadata")]
+    ProviderPolicyMetadata => "provider/policyMetadata" (v2::ProviderPolicyMetadataNotification),
     Warning => "warning" (v2::WarningNotification),
     GuardianWarning => "guardianWarning" (v2::GuardianWarningNotification),
     DeprecationNotice => "deprecationNotice" (v2::DeprecationNoticeNotification),
@@ -2450,9 +2450,9 @@ mod tests {
     }
 
     #[test]
-    fn turn_moderation_metadata_notification_is_marked_experimental() {
+    fn provider_policy_metadata_notification_is_marked_experimental() {
         let notification =
-            ServerNotification::TurnModerationMetadata(v2::TurnModerationMetadataNotification {
+            ServerNotification::ProviderPolicyMetadata(v2::ProviderPolicyMetadataNotification {
                 thread_id: "thr_123".to_string(),
                 turn_id: "turn_123".to_string(),
                 metadata: json!({"presentation": "inline"}),
@@ -2460,7 +2460,7 @@ mod tests {
 
         assert_eq!(
             crate::experimental_api::ExperimentalApi::experimental_reason(&notification),
-            Some("turn/moderationMetadata")
+            Some("provider/policyMetadata")
         );
     }
 

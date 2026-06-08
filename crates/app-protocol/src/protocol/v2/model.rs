@@ -4,7 +4,7 @@ use runtime_protocol::model_capabilities::ModelAvailabilityNux as CoreModelAvail
 use runtime_protocol::model_capabilities::ReasoningEffort;
 use runtime_protocol::model_capabilities::default_input_modalities;
 use runtime_protocol::protocol::ModelRerouteReason as CoreModelRerouteReason;
-use runtime_protocol::protocol::ModelVerification as CoreModelVerification;
+use runtime_protocol::protocol::ProviderPolicyCheck as CoreProviderPolicyCheck;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -13,13 +13,15 @@ use ts_rs::TS;
 
 v2_enum_from_core!(
     pub enum ModelRerouteReason from CoreModelRerouteReason {
-        HighRiskCyberActivity
+        #[serde(alias = "highRiskCyberActivity")]
+        ProviderPolicy
     }
 );
 
 v2_enum_from_core!(
-    pub enum ModelVerification from CoreModelVerification {
-        TrustedAccessForCyber
+    pub enum ProviderPolicyCheck from CoreProviderPolicyCheck {
+        #[serde(alias = "trustedAccessForCyber")]
+        AdditionalReview
     }
 );
 
@@ -148,16 +150,16 @@ pub struct ModelReroutedNotification {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct ModelVerificationNotification {
+pub struct ProviderPolicyCheckNotification {
     pub thread_id: String,
     pub turn_id: String,
-    pub verifications: Vec<ModelVerification>,
+    pub checks: Vec<ProviderPolicyCheck>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct TurnModerationMetadataNotification {
+pub struct ProviderPolicyMetadataNotification {
     pub thread_id: String,
     pub turn_id: String,
     pub metadata: JsonValue,

@@ -2681,7 +2681,7 @@ fn plugin_source_serializes_local_and_git_variants() {
 }
 
 #[test]
-fn plugin_catalog_entry_serializes_remote_only_path_as_null() {
+fn plugin_catalog_entry_serializes_generated_catalog_path_as_null() {
     assert_eq!(
         serde_json::to_value(PluginCatalogEntry {
             name: "sprite-curated-remote".to_string(),
@@ -2865,7 +2865,7 @@ fn plugin_summary_defaults_missing_availability_to_available() {
         "installed": false,
         "enabled": false,
         "installPolicy": "AVAILABLE",
-        "authPolicy": "ON_USE",
+        "setupPolicy": "ON_USE",
         "interface": null,
     }))
     .unwrap();
@@ -2875,14 +2875,10 @@ fn plugin_summary_defaults_missing_availability_to_available() {
 }
 
 #[test]
-fn plugin_availability_deserializes_enabled_alias() {
-    let availability: PluginAvailability = serde_json::from_value(json!("ENABLED")).unwrap();
+fn plugin_availability_rejects_plugin_service_enabled_alias() {
+    let availability = serde_json::from_value::<PluginAvailability>(json!("ENABLED"));
 
-    assert_eq!(availability, PluginAvailability::Available);
-    assert_eq!(
-        serde_json::to_value(availability).unwrap(),
-        json!("AVAILABLE")
-    );
+    assert!(availability.is_err());
 }
 
 #[test]

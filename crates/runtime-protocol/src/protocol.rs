@@ -912,17 +912,19 @@ pub enum EventMsg {
     /// Model routing changed from the requested model to a different model.
     ModelReroute(ModelRerouteEvent),
 
-    /// Backend recommends additional account verification for this turn.
+    /// Provider recommends additional policy confirmation for this turn.
     ///
-    /// Retained only for protocol compatibility with providers that still emit
-    /// first-party verification metadata.
-    ModelVerification(ModelVerificationEvent),
+    /// Accepts the legacy first-party verification event name for replay
+    /// compatibility.
+    #[serde(alias = "model_verification")]
+    ProviderPolicyCheck(ProviderPolicyCheckEvent),
 
-    /// Backend moderation metadata intended for first-party turn presentation.
+    /// Provider policy metadata intended for turn presentation.
     ///
-    /// Retained only for protocol compatibility with providers that still emit
-    /// first-party moderation metadata.
-    TurnModerationMetadata(TurnModerationMetadataEvent),
+    /// Accepts the legacy first-party moderation metadata event name for replay
+    /// compatibility.
+    #[serde(alias = "turn_moderation_metadata")]
+    ProviderPolicyMetadata(ProviderPolicyMetadataEvent),
 
     /// Conversation history was compacted (either automatically or manually).
     ContextCompacted(ContextCompactedEvent),
@@ -1532,7 +1534,8 @@ pub struct WarningEvent {
 #[serde(rename_all = "snake_case")]
 #[ts(rename_all = "snake_case")]
 pub enum ModelRerouteReason {
-    HighRiskCyberActivity,
+    #[serde(alias = "high_risk_cyber_activity")]
+    ProviderPolicy,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, JsonSchema, TS)]
@@ -1545,17 +1548,18 @@ pub struct ModelRerouteEvent {
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(rename_all = "snake_case")]
-pub enum ModelVerification {
-    TrustedAccessForCyber,
+pub enum ProviderPolicyCheck {
+    #[serde(alias = "trusted_access_for_cyber")]
+    AdditionalReview,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, JsonSchema, TS)]
-pub struct ModelVerificationEvent {
-    pub verifications: Vec<ModelVerification>,
+pub struct ProviderPolicyCheckEvent {
+    pub checks: Vec<ProviderPolicyCheck>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema, TS)]
-pub struct TurnModerationMetadataEvent {
+pub struct ProviderPolicyMetadataEvent {
     pub metadata: Value,
 }
 
