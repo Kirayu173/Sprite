@@ -5,9 +5,13 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
+globset = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+thiserror = { workspace = true }
+url = "2.5.8"
 
 [lib]
 doctest = false

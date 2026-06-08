@@ -82,10 +82,7 @@ pub struct OtelProvider {
 
 impl OtelProvider {
     pub fn shutdown(&self) {
-        if self
-            .shutdown_called
-            .swap(true, Ordering::AcqRel)
-        {
+        if self.shutdown_called.swap(true, Ordering::AcqRel) {
             return;
         }
         if let Some(tracer_provider) = &self.tracer_provider {

@@ -5,11 +5,12 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+file-system = { workspace = true }
 utils-absolute-path = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["macros", "rt"] }
+tokio = { workspace = true, features = ["fs", "macros", "rt-multi-thread"] }
 
 [lib]
 doctest = false

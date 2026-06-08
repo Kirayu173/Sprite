@@ -231,15 +231,13 @@ impl MetricsClient {
             MetricsExporter::InMemory(exporter) => {
                 build_provider(resource, exporter, export_interval, runtime_reader.clone())
             }
-            MetricsExporter::Otlp(exporter) => {
-                build_otlp_provider(
-                    resource,
-                    exporter,
-                    export_interval,
-                    runtime_reader.clone(),
-                    Temporality::Delta,
-                )?
-            }
+            MetricsExporter::Otlp(exporter) => build_otlp_provider(
+                resource,
+                exporter,
+                export_interval,
+                runtime_reader.clone(),
+                Temporality::Delta,
+            )?,
         };
 
         Ok(Self(std::sync::Arc::new(MetricsClientInner {

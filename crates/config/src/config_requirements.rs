@@ -471,6 +471,76 @@ impl From<NetworkRequirementsToml> for NetworkConstraints {
     }
 }
 
+impl NetworkDomainPermissionsToml {
+    pub fn to_network_proxy_permissions(&self) -> network_proxy::NetworkDomainPermissions {
+        network_proxy::NetworkDomainPermissions {
+            entries: self
+                .entries
+                .iter()
+                .map(
+                    |(pattern, permission)| network_proxy::NetworkDomainPermissionEntry {
+                        pattern: pattern.clone(),
+                        permission: match permission {
+                            NetworkDomainPermissionToml::Allow => {
+                                network_proxy::NetworkDomainPermission::Allow
+                            }
+                            NetworkDomainPermissionToml::Deny => {
+                                network_proxy::NetworkDomainPermission::Deny
+                            }
+                        },
+                    },
+                )
+                .collect(),
+        }
+    }
+}
+
+impl NetworkUnixSocketPermissionsToml {
+    pub fn to_network_proxy_permissions(&self) -> network_proxy::NetworkUnixSocketPermissions {
+        network_proxy::NetworkUnixSocketPermissions {
+            entries: self
+                .entries
+                .iter()
+                .map(|(path, permission)| {
+                    (
+                        path.clone(),
+                        match permission {
+                            NetworkUnixSocketPermissionToml::Allow => {
+                                network_proxy::NetworkUnixSocketPermission::Allow
+                            }
+                            NetworkUnixSocketPermissionToml::Deny => {
+                                network_proxy::NetworkUnixSocketPermission::Deny
+                            }
+                        },
+                    )
+                })
+                .collect(),
+        }
+    }
+}
+
+impl NetworkConstraints {
+    pub fn to_network_proxy_constraints(&self) -> network_proxy::NetworkProxyConstraints {
+        network_proxy::NetworkProxyConstraints {
+            enabled: self.enabled,
+            mode: None,
+            allow_upstream_proxy: self.allow_upstream_proxy,
+            dangerously_allow_non_loopback_proxy: self.dangerously_allow_non_loopback_proxy,
+            dangerously_allow_all_unix_sockets: self.dangerously_allow_all_unix_sockets,
+            domains: self
+                .domains
+                .as_ref()
+                .map(NetworkDomainPermissionsToml::to_network_proxy_permissions),
+            managed_allowed_domains_only: self.managed_allowed_domains_only,
+            unix_sockets: self
+                .unix_sockets
+                .as_ref()
+                .map(NetworkUnixSocketPermissionsToml::to_network_proxy_permissions),
+            allow_local_binding: self.allow_local_binding,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct FilesystemRequirementsToml {
     pub deny_read: Option<Vec<FilesystemDenyReadPattern>>,
@@ -2932,6 +3002,44 @@ command = "python3 /enterprise/hooks/pre.py"
             unix_sockets.allow_unix_sockets(),
             vec!["/tmp/example.sock".to_string()]
         );
+    }
+
+    #[test]
+    fn network_constraints_convert_to_proxy_validator() {
+        let constraints = NetworkConstraints {
+            domains: Some(NetworkDomainPermissionsToml {
+                entries: BTreeMap::from([(
+                    "**.example.com".to_string(),
+                    NetworkDomainPermissionToml::Allow,
+                )]),
+            }),
+            ..Default::default()
+        };
+        let mut config = network_proxy::NetworkProxyConfig::default();
+        config.network.upsert_domain_permission(
+            "api.example.com".to_string(),
+            network_proxy::NetworkDomainPermission::Allow,
+            network_proxy::normalize_host,
+        );
+
+        network_proxy::validate_policy_against_constraints(
+            &config,
+            &constraints.to_network_proxy_constraints(),
+        )
+        .expect("allowed domain should be within managed constraints");
+
+        config.network.upsert_domain_permission(
+            "api.other.com".to_string(),
+            network_proxy::NetworkDomainPermission::Allow,
+            network_proxy::normalize_host,
+        );
+        let err = network_proxy::validate_policy_against_constraints(
+            &config,
+            &constraints.to_network_proxy_constraints(),
+        )
+        .expect_err("domain outside managed constraints should fail");
+
+        assert_eq!(err.field_name, "network.allowed_domains");
     }
 
     #[test]

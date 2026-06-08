@@ -9,12 +9,14 @@ use crate::ProfileV2Name;
 use app_protocol::ConfigLayer;
 use app_protocol::ConfigLayerMetadata;
 use app_protocol::ConfigLayerSource;
+use runtime_protocol::model_capabilities::ModelsResponse;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 use toml::Value as TomlValue;
 use utils_absolute_path::AbsolutePathBuf;
+use utils_absolute_path::AbsolutePathBufGuard;
 
 /// User-facing config loading behavior that is not part of the config document.
 #[derive(Debug, Default, Clone)]
@@ -458,6 +460,24 @@ impl ConfigLayerStack {
         merged
     }
 
+    /// Loads the JSON model catalog referenced by the effective config, if any.
+    ///
+    /// The catalog path is resolved when config layers are loaded, so this
+    /// helper only consumes the merged, typed config view and validates the
+    /// referenced JSON file.
+    pub fn load_model_catalog_json(&self) -> std::io::Result<Option<ModelsResponse>> {
+        let effective_config = self.effective_config();
+        let _guard = AbsolutePathBufGuard::new(std::env::current_dir()?.as_path());
+        let config_toml = effective_config
+            .try_into::<crate::config_toml::ConfigToml>()
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err))?;
+        config_toml
+            .model_catalog_json
+            .as_ref()
+            .map(load_catalog_json)
+            .transpose()
+    }
+
     /// Returns field origins for the merged config-layer view.
     ///
     /// Requirement sources are tracked separately and are not included here.
@@ -504,6 +524,37 @@ impl ConfigLayerStack {
         }
         layers
     }
+}
+
+fn load_catalog_json(path: &AbsolutePathBuf) -> std::io::Result<ModelsResponse> {
+    let file_contents = std::fs::read_to_string(path.as_path()).map_err(|err| {
+        std::io::Error::new(
+            err.kind(),
+            format!(
+                "failed to read model_catalog_json path `{}`: {err}",
+                path.as_path().display()
+            ),
+        )
+    })?;
+    let catalog = serde_json::from_str::<ModelsResponse>(&file_contents).map_err(|err| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!(
+                "failed to parse model_catalog_json path `{}` as JSON: {err}",
+                path.as_path().display()
+            ),
+        )
+    })?;
+    if catalog.models.is_empty() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!(
+                "model_catalog_json path `{}` must contain at least one model",
+                path.as_path().display()
+            ),
+        ));
+    }
+    Ok(catalog)
 }
 
 /// Ensures precedence ordering of config layers is correct. Returns the index

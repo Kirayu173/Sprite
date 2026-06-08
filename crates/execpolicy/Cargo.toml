@@ -5,7 +5,18 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
 multimap = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+shlex = { workspace = true }
+thiserror = { workspace = true }
+utils-absolute-path = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
 
 [lib]
 doctest = false

@@ -243,3 +243,136 @@ model = "gpt-dev"
     .await
     .expect("profile-v2 should allow unrelated legacy profiles in base user config");
 }
+
+#[tokio::test]
+async fn model_catalog_json_loads_from_effective_config() {
+    let tmp = tempdir().expect("tempdir");
+    std::fs::write(
+        tmp.path().join(CONFIG_TOML_FILE),
+        r#"model_catalog_json = "./models.json""#,
+    )
+    .expect("write user config");
+    std::fs::write(
+        tmp.path().join("models.json"),
+        model_catalog_json("sprite-test"),
+    )
+    .expect("write catalog");
+
+    let stack = load_config_layers_state(
+        &TestFileSystem,
+        tmp.path(),
+        /*cwd*/ None,
+        &[],
+        LoaderOverrides::without_host_requirements_for_tests(),
+        &crate::NoopThreadConfigLoader,
+    )
+    .await
+    .expect("load config");
+
+    let catalog = stack
+        .load_model_catalog_json()
+        .expect("load model catalog")
+        .expect("catalog configured");
+
+    assert_eq!(catalog.models.len(), 1);
+    assert_eq!(catalog.models[0].slug, "sprite-test");
+}
+
+#[tokio::test]
+async fn model_catalog_json_rejects_empty_catalog() {
+    let tmp = tempdir().expect("tempdir");
+    std::fs::write(
+        tmp.path().join(CONFIG_TOML_FILE),
+        r#"model_catalog_json = "./models.json""#,
+    )
+    .expect("write user config");
+    std::fs::write(tmp.path().join("models.json"), r#"{"models":[]}"#).expect("write catalog");
+
+    let stack = load_config_layers_state(
+        &TestFileSystem,
+        tmp.path(),
+        /*cwd*/ None,
+        &[],
+        LoaderOverrides::without_host_requirements_for_tests(),
+        &crate::NoopThreadConfigLoader,
+    )
+    .await
+    .expect("load config");
+
+    let err = stack
+        .load_model_catalog_json()
+        .expect_err("empty catalog should fail");
+
+    assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+    assert!(err.to_string().contains("must contain at least one model"));
+}
+
+#[tokio::test]
+async fn model_catalog_json_rejects_invalid_json() {
+    let tmp = tempdir().expect("tempdir");
+    std::fs::write(
+        tmp.path().join(CONFIG_TOML_FILE),
+        r#"model_catalog_json = "./models.json""#,
+    )
+    .expect("write user config");
+    std::fs::write(tmp.path().join("models.json"), "not json").expect("write catalog");
+
+    let stack = load_config_layers_state(
+        &TestFileSystem,
+        tmp.path(),
+        /*cwd*/ None,
+        &[],
+        LoaderOverrides::without_host_requirements_for_tests(),
+        &crate::NoopThreadConfigLoader,
+    )
+    .await
+    .expect("load config");
+
+    let err = stack
+        .load_model_catalog_json()
+        .expect_err("invalid JSON should fail");
+
+    assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+    assert!(
+        err.to_string()
+            .contains("failed to parse model_catalog_json")
+    );
+}
+
+fn model_catalog_json(slug: &str) -> String {
+    format!(
+        r#"{{
+  "models": [
+    {{
+      "slug": "{slug}",
+      "display_name": "Sprite Test",
+      "description": null,
+      "supported_reasoning_levels": [],
+      "shell_type": "shell_command",
+      "visibility": "list",
+      "supported_in_api": true,
+      "priority": 1,
+      "upgrade": null,
+      "base_instructions": "base",
+      "model_messages": null,
+      "supports_reasoning_summaries": false,
+      "default_reasoning_summary": "auto",
+      "support_verbosity": false,
+      "default_verbosity": null,
+      "apply_patch_tool_type": null,
+      "truncation_policy": {{
+        "mode": "bytes",
+        "limit": 10000
+      }},
+      "supports_parallel_tool_calls": false,
+      "supports_image_detail_original": false,
+      "context_window": null,
+      "auto_compact_token_limit": null,
+      "effective_context_window_percent": 95,
+      "experimental_supported_tools": [],
+      "input_modalities": ["text"]
+    }}
+  ]
+}}"#
+    )
+}

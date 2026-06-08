@@ -9,8 +9,12 @@ use rollout_trace::ToolDispatchRequester;
 use rollout_trace::ToolDispatchResult;
 use rollout_trace::ToolDispatchTraceContext;
 use rollout_trace::TraceWriter;
+use runtime_protocol::models::AdditionalPermissionProfile;
 use runtime_protocol::models::FunctionCallOutputPayload;
 use runtime_protocol::models::ResponseInputItem;
+use runtime_protocol::models::SandboxPermissions;
+use runtime_protocol::models::SearchToolCallParams;
+use serde_json::Value as JsonValue;
 
 #[derive(Debug, Clone)]
 pub struct RuntimeToolInvocation {
@@ -36,8 +40,24 @@ pub enum RuntimeToolRequester {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RuntimeToolPayload {
-    Function { arguments: String },
-    Custom { input: String },
+    Function {
+        arguments: String,
+    },
+    ToolSearch {
+        arguments: SearchToolCallParams,
+    },
+    Custom {
+        input: String,
+    },
+    LocalShell {
+        command: Vec<String>,
+        workdir: Option<String>,
+        timeout_ms: Option<u64>,
+        sandbox_permissions: Option<SandboxPermissions>,
+        prefix_rule: Option<Vec<String>>,
+        additional_permissions: Option<AdditionalPermissionProfile>,
+        justification: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -77,7 +97,27 @@ impl ToolDispatchTrace {
                 RuntimeToolPayload::Function { arguments } => {
                     ToolDispatchPayload::Function { arguments }
                 }
+                RuntimeToolPayload::ToolSearch { arguments } => {
+                    ToolDispatchPayload::ToolSearch { arguments }
+                }
                 RuntimeToolPayload::Custom { input } => ToolDispatchPayload::Custom { input },
+                RuntimeToolPayload::LocalShell {
+                    command,
+                    workdir,
+                    timeout_ms,
+                    sandbox_permissions,
+                    prefix_rule,
+                    additional_permissions,
+                    justification,
+                } => ToolDispatchPayload::LocalShell {
+                    command,
+                    workdir,
+                    timeout_ms,
+                    sandbox_permissions,
+                    prefix_rule,
+                    additional_permissions,
+                    justification,
+                },
             },
         };
         Self {
@@ -90,12 +130,26 @@ impl ToolDispatchTrace {
     }
 
     pub fn record_function_output(&self, call_id: String, output: FunctionCallOutputPayload) {
+        self.record_direct_response(ResponseInputItem::FunctionCallOutput { call_id, output });
+    }
+
+    pub fn record_direct_response(&self, response_item: ResponseInputItem) {
         self.context.record_completed(
             ExecutionStatus::Completed,
-            ToolDispatchResult::DirectResponse {
-                response_item: ResponseInputItem::FunctionCallOutput { call_id, output },
-            },
+            ToolDispatchResult::DirectResponse { response_item },
         );
+    }
+
+    pub fn record_code_mode_response(&self, value: JsonValue) {
+        self.context.record_completed(
+            ExecutionStatus::Completed,
+            ToolDispatchResult::CodeModeResponse { value },
+        );
+    }
+
+    pub fn record_completed(&self, result: ToolDispatchResult) {
+        self.context
+            .record_completed(ExecutionStatus::Completed, result);
     }
 
     pub fn record_failed(&self, error: impl std::fmt::Display) {
