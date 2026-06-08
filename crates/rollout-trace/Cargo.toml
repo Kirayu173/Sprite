@@ -1,0 +1,26 @@
+[package]
+name = "rollout-trace"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "rollout_trace"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+http = { workspace = true }
+runtime-protocol = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }

@@ -1,0 +1,19 @@
+[package]
+name = "response-debug-context"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "response_debug_context"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+http = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

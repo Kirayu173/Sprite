@@ -69,7 +69,6 @@ use codex_features::MultiAgentConfigToml;
 use codex_features::NetworkProxyConfigToml;
 use codex_git_utils::resolve_root_git_project_for_trust;
 use codex_install_context::InstallContext;
-use codex_login::AuthManagerConfig;
 use codex_mcp::McpConfig;
 use codex_memories_read::memory_root;
 use codex_model_provider_info::LEGACY_OLLAMA_CHAT_PROVIDER_ID;
@@ -1076,24 +1075,6 @@ pub enum TerminalResizeReflowMaxRows {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TerminalResizeReflowConfig {
     pub max_rows: TerminalResizeReflowMaxRows,
-}
-
-impl AuthManagerConfig for Config {
-    fn sprite_home(&self) -> PathBuf {
-        self.sprite_home.to_path_buf()
-    }
-
-    fn cli_auth_credentials_store_mode(&self) -> AuthCredentialsStoreMode {
-        self.cli_auth_credentials_store_mode
-    }
-
-    fn forced_sprite_backend_workspace_id(&self) -> Option<Vec<String>> {
-        self.forced_sprite_backend_workspace_id.clone()
-    }
-
-    fn sprite_backend_base_url(&self) -> String {
-        self.sprite_backend_base_url.clone()
-    }
 }
 
 #[derive(Clone, Default)]
