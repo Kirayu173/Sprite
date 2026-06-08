@@ -1,10 +1,10 @@
-﻿use experimental_api_macros::ExperimentalApi;
+use experimental_api_macros::ExperimentalApi;
 use runtime_protocol::config_types::ApprovalsReviewer as CoreApprovalsReviewer;
 use runtime_protocol::config_types::SandboxMode as CoreSandboxMode;
 use runtime_protocol::protocol::AskForApproval as CoreAskForApproval;
-use runtime_protocol::protocol::RuntimeErrorInfo as CoreRuntimeErrorInfo;
 use runtime_protocol::protocol::GranularApprovalConfig as CoreGranularApprovalConfig;
 use runtime_protocol::protocol::NonSteerableTurnKind as CoreNonSteerableTurnKind;
+use runtime_protocol::protocol::RuntimeErrorInfo as CoreRuntimeErrorInfo;
 use schemars::JsonSchema;
 use schemars::r#gen::SchemaGenerator;
 use schemars::schema::InstanceType;
@@ -48,10 +48,6 @@ macro_rules! v2_enum_from_core {
 }
 
 pub(super) use v2_enum_from_core;
-
-pub(super) const fn default_enabled() -> bool {
-    true
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
@@ -314,5 +310,3 @@ impl From<CoreSandboxMode> for SandboxMode {
         }
     }
 }
-
-

@@ -373,5 +373,4 @@ mod tests {
         assert!(parse_seq("rg -g\"$(pwd)\" pattern").is_none());
         assert!(parse_seq("rg -g\"$(echo '*.py')\" pattern").is_none());
     }
-
 }

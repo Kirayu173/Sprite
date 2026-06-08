@@ -224,10 +224,7 @@ pub fn generate_json_with_experimental(out_dir: &Path, experimental_api: bool) -
     if !experimental_api {
         filter_experimental_schema(&mut bundle)?;
     }
-    write_pretty_json(
-        out_dir.join("app_protocol.schemas.json"),
-        &bundle,
-    )?;
+    write_pretty_json(out_dir.join("app_protocol.schemas.json"), &bundle)?;
     let flat_v2_bundle = build_flat_v2_schema(&bundle)?;
     write_pretty_json(
         out_dir.join("app_protocol.v2.schemas.json"),
@@ -2823,8 +2820,7 @@ permissionProfile?: string | null};
         );
         assert_eq!(output_dir.join("EventMsg.json").exists(), false);
 
-        let bundle_json =
-            fs::read_to_string(output_dir.join("app_protocol.schemas.json"))?;
+        let bundle_json = fs::read_to_string(output_dir.join("app_protocol.schemas.json"))?;
         assert_eq!(bundle_json.contains("mockExperimentalField"), false);
         assert_eq!(bundle_json.contains("additionalPermissions"), false);
         assert_eq!(bundle_json.contains("MockExperimentalMethodParams"), false);
@@ -2854,8 +2850,7 @@ permissionProfile?: string | null};
             flat_v2_bundle_json.contains("\"title\": \"AppServerProtocolV2\""),
             true
         );
-        let flat_v2_bundle =
-            read_json_value(&output_dir.join("app_protocol.v2.schemas.json"))?;
+        let flat_v2_bundle = read_json_value(&output_dir.join("app_protocol.v2.schemas.json"))?;
         let definitions = flat_v2_bundle["definitions"]
             .as_object()
             .expect("flat v2 bundle should include definitions");
@@ -2941,4 +2936,3 @@ permissionProfile?: string | null};
         Ok(())
     }
 }
-

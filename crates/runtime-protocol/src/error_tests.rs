@@ -1,5 +1,5 @@
-use crate::auth::{KnownTier, PlanType};
 use super::*;
+use crate::auth::{KnownTier, PlanType};
 use crate::exec_output::StreamOutput;
 use crate::protocol::RateLimitWindow;
 use chrono::DateTime;
@@ -257,8 +257,9 @@ fn usage_limit_reached_error_formats_team_plan() {
             promo_message: None,
             rate_limit_reached_type: None,
         };
-        let expected =
-            format!("You've hit your usage limit. Try again at {expected_time} or check your plan.");
+        let expected = format!(
+            "You've hit your usage limit. Try again at {expected_time} or check your plan."
+        );
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -336,8 +337,9 @@ fn usage_limit_reached_error_formats_pro_plan_with_reset() {
             promo_message: None,
             rate_limit_reached_type: None,
         };
-        let expected =
-            format!("You've hit your usage limit. Try again at {expected_time} or check your plan.");
+        let expected = format!(
+            "You've hit your usage limit. Try again at {expected_time} or check your plan."
+        );
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -357,8 +359,7 @@ fn usage_limit_reached_error_hides_upsell_for_non_default_limit_name() {
                 ..rate_limit_snapshot()
             })),
             promo_message: Some(
-                "Visit https://sprite.dev/settings/usage to purchase more credits"
-                    .to_string(),
+                "Visit https://sprite.dev/settings/usage to purchase more credits".to_string(),
             ),
             rate_limit_reached_type: None,
         };
@@ -382,8 +383,9 @@ fn usage_limit_reached_includes_minutes_when_available() {
             promo_message: None,
             rate_limit_reached_type: None,
         };
-        let expected =
-            format!("You've hit your usage limit. Try again at {expected_time} or check your plan.");
+        let expected = format!(
+            "You've hit your usage limit. Try again at {expected_time} or check your plan."
+        );
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -523,8 +525,9 @@ fn usage_limit_reached_includes_hours_and_minutes() {
             promo_message: None,
             rate_limit_reached_type: None,
         };
-        let expected =
-            format!("You've hit your usage limit. Try again at {expected_time} or check your plan.");
+        let expected = format!(
+            "You've hit your usage limit. Try again at {expected_time} or check your plan."
+        );
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -543,8 +546,9 @@ fn usage_limit_reached_includes_days_hours_minutes() {
             promo_message: None,
             rate_limit_reached_type: None,
         };
-        let expected =
-            format!("You've hit your usage limit. Try again at {expected_time} or check your plan.");
+        let expected = format!(
+            "You've hit your usage limit. Try again at {expected_time} or check your plan."
+        );
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -562,8 +566,9 @@ fn usage_limit_reached_less_than_minute() {
             promo_message: None,
             rate_limit_reached_type: None,
         };
-        let expected =
-            format!("You've hit your usage limit. Try again at {expected_time} or check your plan.");
+        let expected = format!(
+            "You've hit your usage limit. Try again at {expected_time} or check your plan."
+        );
         assert_eq!(err.to_string(), expected);
     });
 }
@@ -583,10 +588,9 @@ fn usage_limit_reached_with_promo_message() {
             ),
             rate_limit_reached_type: None,
         };
-        let expected =
-            format!("You've hit your usage limit. Try again at {expected_time} or check your plan.");
+        let expected = format!(
+            "You've hit your usage limit. Try again at {expected_time} or check your plan."
+        );
         assert_eq!(err.to_string(), expected);
     });
 }
-
-

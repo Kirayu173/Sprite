@@ -1,0 +1,12 @@
+﻿[package]
+name = "file-system"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+utils-absolute-path = { workspace = true }
+
+[lib]
+doctest = false

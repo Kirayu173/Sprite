@@ -4,8 +4,6 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
-use utils_absolute_path::AbsolutePathBuf;
-use utils_absolute_path::canonicalize_preserving_symlinks;
 use globset::GlobBuilder;
 use globset::GlobMatcher;
 use schemars::JsonSchema;
@@ -14,6 +12,8 @@ use serde::Serialize;
 use strum_macros::Display;
 use tracing::error;
 use ts_rs::TS;
+use utils_absolute_path::AbsolutePathBuf;
+use utils_absolute_path::canonicalize_preserving_symlinks;
 
 use crate::protocol::NetworkAccess;
 use crate::protocol::SandboxPolicy;
@@ -2053,12 +2053,10 @@ mod tests {
                 .contains(&explicit_dot_sprite),
             "explicit .sprite rule should win over the default protected carveout"
         );
-        assert!(
-            policy.can_write_path_with_cwd(
-                explicit_dot_sprite.join("config.toml").as_path(),
-                cwd.path()
-            )
-        );
+        assert!(policy.can_write_path_with_cwd(
+            explicit_dot_sprite.join("config.toml").as_path(),
+            cwd.path()
+        ));
     }
 
     #[test]

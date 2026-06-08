@@ -343,8 +343,9 @@ pub fn item_event_to_server_notification(
             })
         }
         EventMsg::AgentMessageContentDelta(event) => {
-            let runtime_protocol::protocol::AgentMessageContentDeltaEvent { item_id, delta, .. } =
-                event;
+            let runtime_protocol::protocol::AgentMessageContentDeltaEvent {
+                item_id, delta, ..
+            } = event;
             ServerNotification::AgentMessageDelta(AgentMessageDeltaNotification {
                 thread_id,
                 turn_id,
@@ -452,12 +453,12 @@ pub fn item_event_to_server_notification(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
     use runtime_protocol::ThreadId;
     use runtime_protocol::protocol::CollabResumeBeginEvent;
     use runtime_protocol::protocol::CollabResumeEndEvent;
     use runtime_protocol::protocol::ExecCommandOutputDeltaEvent;
     use runtime_protocol::protocol::ExecOutputStream;
-    use pretty_assertions::assert_eq;
 
     fn assert_item_started_server_notification(
         notification: ServerNotification,

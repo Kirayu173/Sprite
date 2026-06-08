@@ -1,11 +1,9 @@
-﻿use anyhow::Result;
+use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
-#[command(
-    about = "Generate TypeScript bindings and JSON Schemas for the app-server protocol"
-)]
+#[command(about = "Generate TypeScript bindings and JSON Schemas for the app-server protocol")]
 struct Args {
     /// Output directory where generated files will be written
     #[arg(short = 'o', long = "out", value_name = "DIR")]
@@ -32,4 +30,3 @@ fn main() -> Result<()> {
     )?;
     app_protocol::generate_json_with_experimental(&args.out_dir, args.experimental)
 }
-

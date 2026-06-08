@@ -1,4 +1,4 @@
-﻿use super::shared::v2_enum_from_core;
+use super::shared::v2_enum_from_core;
 use runtime_protocol::protocol::HookEventName as CoreHookEventName;
 use runtime_protocol::protocol::HookExecutionMode as CoreHookExecutionMode;
 use runtime_protocol::protocol::HookHandlerType as CoreHookHandlerType;
@@ -9,11 +9,11 @@ use runtime_protocol::protocol::HookRunSummary as CoreHookRunSummary;
 use runtime_protocol::protocol::HookScope as CoreHookScope;
 use runtime_protocol::protocol::HookSource as CoreHookSource;
 use runtime_protocol::protocol::HookTrustStatus as CoreHookTrustStatus;
-use utils_absolute_path::AbsolutePathBuf;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
 use ts_rs::TS;
+use utils_absolute_path::AbsolutePathBuf;
 
 v2_enum_from_core!(
     pub enum HookEventName from CoreHookEventName {
@@ -44,13 +44,11 @@ v2_enum_from_core!(
         System,
         User,
         Project,
-        Mdm,
         SessionFlags,
         Plugin,
         Requirements,
         ManagedConfig,
         LegacyConfigFile,
-        LegacyConfigMdm,
         Unknown,
     }
 );
@@ -153,4 +151,3 @@ pub struct HookCompletedNotification {
     pub turn_id: Option<String>,
     pub run: HookRunSummary,
 }
-

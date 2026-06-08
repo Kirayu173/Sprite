@@ -4,24 +4,24 @@ pub use crate::auth::RefreshTokenFailedError;
 pub use crate::auth::RefreshTokenFailedReason;
 use crate::exec_output::ExecToolCallOutput;
 use crate::network_policy::NetworkPolicyDecisionPayload;
-use crate::protocol::RuntimeErrorInfo;
 use crate::protocol::ErrorEvent;
 use crate::protocol::RateLimitReachedType;
 use crate::protocol::RateLimitSnapshot;
+use crate::protocol::RuntimeErrorInfo;
 use crate::protocol::TruncationPolicy;
+use async_utils::CancelErr;
 use chrono::DateTime;
 use chrono::Datelike;
 use chrono::Local;
 use chrono::Utc;
-use async_utils::CancelErr;
-use utils_string::truncate_middle_chars;
-use utils_string::truncate_middle_with_token_budget;
 use reqwest::StatusCode;
 use serde_json;
 use std::io;
 use std::time::Duration;
 use thiserror::Error;
 use tokio::task::JoinError;
+use utils_string::truncate_middle_chars;
+use utils_string::truncate_middle_with_token_budget;
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;
 
@@ -206,9 +206,11 @@ impl RuntimeError {
             RuntimeError::ConnectionFailed(_) => RuntimeErrorInfo::HttpConnectionFailed {
                 http_status_code: self.http_status_code_value(),
             },
-            RuntimeError::ResponseStreamFailed(_) => RuntimeErrorInfo::ResponseStreamConnectionFailed {
-                http_status_code: self.http_status_code_value(),
-            },
+            RuntimeError::ResponseStreamFailed(_) => {
+                RuntimeErrorInfo::ResponseStreamConnectionFailed {
+                    http_status_code: self.http_status_code_value(),
+                }
+            }
             RuntimeError::RefreshTokenFailed(_) => RuntimeErrorInfo::Unauthorized,
             RuntimeError::SessionConfiguredNotFirstEvent
             | RuntimeError::InternalServerError
@@ -441,7 +443,11 @@ impl std::fmt::Display for UsageLimitReachedError {
             .filter(|name| !name.is_empty())
             && !limit_name.eq_ignore_ascii_case("usage")
         {
-            return write!(f, "{}", usage_limit_message(Some(limit_name), self.resets_at.as_ref()));
+            return write!(
+                f,
+                "{}",
+                usage_limit_message(Some(limit_name), self.resets_at.as_ref())
+            );
         }
 
         write!(f, "{}", usage_limit_message(None, self.resets_at.as_ref()))
@@ -561,4 +567,3 @@ pub fn get_error_message_ui(e: &RuntimeError) -> String {
 #[cfg(test)]
 #[path = "error_tests.rs"]
 mod tests;
-

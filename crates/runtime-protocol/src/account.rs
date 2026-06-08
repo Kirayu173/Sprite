@@ -38,13 +38,8 @@ pub enum PlanType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProviderAccount {
     ApiKey,
-    Managed {
-        email: String,
-        plan_type: PlanType,
-    },
-    External {
-        provider_name: String,
-    },
+    Managed { email: String, plan_type: PlanType },
+    External { provider_name: String },
 }
 
 impl From<AuthPlanType> for PlanType {

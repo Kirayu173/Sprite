@@ -1,4 +1,4 @@
-﻿use super::ActivePermissionProfile;
+use super::ActivePermissionProfile;
 use super::ApprovalsReviewer;
 use super::AskForApproval;
 use super::SandboxMode;
@@ -14,12 +14,11 @@ use experimental_api_macros::ExperimentalApi;
 use runtime_protocol::config_types::CollaborationMode;
 use runtime_protocol::config_types::Personality;
 use runtime_protocol::config_types::ReasoningSummary;
-use runtime_protocol::models::ResponseItem;
 use runtime_protocol::model_capabilities::ReasoningEffort;
+use runtime_protocol::models::ResponseItem;
 use runtime_protocol::protocol::ThreadGoalStatus as CoreThreadGoalStatus;
 use runtime_protocol::protocol::TokenUsage as CoreTokenUsage;
 use runtime_protocol::protocol::TokenUsageInfo as CoreTokenUsageInfo;
-use utils_absolute_path::AbsolutePathBuf;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -27,6 +26,7 @@ use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use ts_rs::TS;
+use utils_absolute_path::AbsolutePathBuf;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
@@ -1371,4 +1371,3 @@ pub struct ContextCompactedNotification {
     pub thread_id: String,
     pub turn_id: String,
 }
-

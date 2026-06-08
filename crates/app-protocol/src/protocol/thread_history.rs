@@ -776,7 +776,10 @@ impl ThreadHistoryBuilder {
         self.upsert_item_in_current_turn(item);
     }
 
-    fn handle_collab_close_end(&mut self, payload: &runtime_protocol::protocol::CollabCloseEndEvent) {
+    fn handle_collab_close_end(
+        &mut self,
+        payload: &runtime_protocol::protocol::CollabCloseEndEvent,
+    ) {
         let status = match &payload.status {
             AgentStatus::Errored(_) | AgentStatus::NotFound => CollabAgentToolCallStatus::Failed,
             _ => CollabAgentToolCallStatus::Completed,
@@ -1118,9 +1121,9 @@ fn convert_dynamic_tool_content_items(
         .iter()
         .cloned()
         .map(|item| match item {
-            runtime_protocol::dynamic_tools::DynamicToolCallOutputContentItem::InputText { text } => {
-                DynamicToolCallOutputContentItem::InputText { text }
-            }
+            runtime_protocol::dynamic_tools::DynamicToolCallOutputContentItem::InputText {
+                text,
+            } => DynamicToolCallOutputContentItem::InputText { text },
             runtime_protocol::dynamic_tools::DynamicToolCallOutputContentItem::InputImage {
                 image_url,
             } => DynamicToolCallOutputContentItem::InputImage { image_url },
@@ -1208,6 +1211,7 @@ impl From<&PendingTurn> for Turn {
 mod tests {
     use super::*;
     use crate::protocol::v2::CommandExecutionSource;
+    use pretty_assertions::assert_eq;
     use runtime_protocol::ThreadId;
     use runtime_protocol::dynamic_tools::DynamicToolCallOutputContentItem as CoreDynamicToolCallOutputContentItem;
     use runtime_protocol::items::HookPromptFragment as CoreHookPromptFragment;
@@ -1223,7 +1227,6 @@ mod tests {
     use runtime_protocol::protocol::AgentReasoningEvent;
     use runtime_protocol::protocol::AgentReasoningRawContentEvent;
     use runtime_protocol::protocol::ApplyPatchApprovalRequestEvent;
-    use runtime_protocol::protocol::RuntimeErrorInfo;
     use runtime_protocol::protocol::CompactedItem;
     use runtime_protocol::protocol::DynamicToolCallResponseEvent;
     use runtime_protocol::protocol::ExecCommandEndEvent;
@@ -1232,6 +1235,7 @@ mod tests {
     use runtime_protocol::protocol::McpInvocation;
     use runtime_protocol::protocol::McpToolCallEndEvent;
     use runtime_protocol::protocol::PatchApplyBeginEvent;
+    use runtime_protocol::protocol::RuntimeErrorInfo;
     use runtime_protocol::protocol::ThreadRolledBackEvent;
     use runtime_protocol::protocol::TurnAbortReason;
     use runtime_protocol::protocol::TurnAbortedEvent;
@@ -1239,11 +1243,10 @@ mod tests {
     use runtime_protocol::protocol::TurnStartedEvent;
     use runtime_protocol::protocol::UserMessageEvent;
     use runtime_protocol::protocol::WebSearchEndEvent;
-    use utils_absolute_path::test_support::PathBufExt;
-    use utils_absolute_path::test_support::test_path_buf;
-    use pretty_assertions::assert_eq;
     use std::path::PathBuf;
     use std::time::Duration;
+    use utils_absolute_path::test_support::PathBufExt;
+    use utils_absolute_path::test_support::test_path_buf;
     use uuid::Uuid;
 
     #[test]
@@ -2341,7 +2344,9 @@ mod tests {
                 completed_at_ms: Some(1_042),
                 status: GuardianAssessmentStatus::Denied,
                 risk_level: Some(runtime_protocol::protocol::GuardianRiskLevel::High),
-                user_authorization: Some(runtime_protocol::protocol::GuardianUserAuthorization::Low),
+                user_authorization: Some(
+                    runtime_protocol::protocol::GuardianUserAuthorization::Low,
+                ),
                 rationale: Some("Would delete user data.".into()),
                 decision_source: Some(
                     runtime_protocol::protocol::GuardianAssessmentDecisionSource::Agent,
@@ -3053,7 +3058,9 @@ mod tests {
                 receiver_thread_ids: vec!["00000000-0000-0000-0000-000000000002".into()],
                 prompt: Some("inspect the repo".into()),
                 model: Some("gpt-5.4-mini".into()),
-                reasoning_effort: Some(runtime_protocol::model_capabilities::ReasoningEffort::Medium),
+                reasoning_effort: Some(
+                    runtime_protocol::model_capabilities::ReasoningEffort::Medium
+                ),
                 agents_states: [(
                     "00000000-0000-0000-0000-000000000002".into(),
                     CollabAgentState {
@@ -3372,4 +3379,3 @@ mod tests {
         assert!(turns[0].items.is_empty());
     }
 }
-

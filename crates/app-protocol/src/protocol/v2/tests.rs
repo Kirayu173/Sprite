@@ -1,4 +1,5 @@
 use super::*;
+use pretty_assertions::assert_eq;
 use runtime_protocol::approvals::ElicitationRequest as CoreElicitationRequest;
 use runtime_protocol::items::AgentMessageContent;
 use runtime_protocol::items::AgentMessageItem;
@@ -31,10 +32,6 @@ use runtime_protocol::protocol::GranularApprovalConfig as CoreGranularApprovalCo
 use runtime_protocol::protocol::NetworkAccess as CoreNetworkAccess;
 use runtime_protocol::request_permissions::RequestPermissionProfile as CoreRequestPermissionProfile;
 use runtime_protocol::user_input::UserInput as CoreUserInput;
-use utils_absolute_path::AbsolutePathBuf;
-use utils_absolute_path::test_support::PathBufExt;
-use utils_absolute_path::test_support::test_path_buf;
-use pretty_assertions::assert_eq;
 use serde_json::Value as JsonValue;
 use serde_json::json;
 use std::collections::BTreeMap;
@@ -42,6 +39,9 @@ use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::time::Duration;
+use utils_absolute_path::AbsolutePathBuf;
+use utils_absolute_path::test_support::PathBufExt;
+use utils_absolute_path::test_support::test_path_buf;
 
 fn absolute_path_string(path: &str) -> String {
     let path = format!("/{}", path.trim_start_matches('/'));
@@ -1617,7 +1617,6 @@ fn config_granular_approval_policy_is_marked_experimental() {
         model_verbosity: None,
         service_tier: None,
         analytics: None,
-        apps: None,
         desktop: None,
         additional: HashMap::new(),
     });
@@ -1648,7 +1647,6 @@ fn config_approvals_reviewer_is_marked_experimental() {
         model_verbosity: None,
         service_tier: None,
         analytics: None,
-        apps: None,
         desktop: None,
         additional: HashMap::new(),
     });
@@ -2684,8 +2682,6 @@ fn plugin_source_serializes_local_and_git_variants() {
     );
 }
 
-
-
 #[test]
 fn plugin_catalog_entry_serializes_remote_only_path_as_null() {
     assert_eq!(
@@ -2764,7 +2760,6 @@ fn plugin_list_params_ignore_removed_force_remote_sync_field() {
         PluginListParams { cwds: None },
     );
 }
-
 
 #[test]
 fn plugin_installed_params_serializes_install_suggestion_names() {
@@ -2857,9 +2852,6 @@ fn plugin_install_params_serialization_omits_force_remote_sync() {
     );
 }
 
-
-
-
 #[test]
 fn plugin_summary_defaults_missing_availability_to_available() {
     let summary: PluginSummary = serde_json::from_value(json!({
@@ -2939,8 +2931,6 @@ fn plugin_uninstall_params_serialization_omits_force_remote_sync() {
         },
     );
 }
-
-
 
 #[test]
 fn error_info_serializes_http_status_code_in_camel_case() {
@@ -3372,5 +3362,3 @@ fn turn_start_params_reject_relative_environment_cwd() {
         "unexpected error: {err}"
     );
 }
-
-

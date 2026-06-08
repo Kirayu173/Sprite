@@ -1447,7 +1447,10 @@ fn sed_read_path(args: &[String]) -> Option<String> {
     if !has_range_script {
         return None;
     }
-    let candidates = skip_flag_values(&args_before_separator, &["-e", "-f", "--expression", "--file"]);
+    let candidates = skip_flag_values(
+        &args_before_separator,
+        &["-e", "-f", "--expression", "--file"],
+    );
     let non_flags: Vec<String> = candidates
         .into_iter()
         .filter(|arg| !arg.starts_with('-'))

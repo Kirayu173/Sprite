@@ -1,9 +1,9 @@
-﻿use utils_absolute_path::AbsolutePathBuf;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
 use ts_rs::TS;
+use utils_absolute_path::AbsolutePathBuf;
 
 /// PTY size in character cells for `process/spawn` PTY sessions.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, TS)]
@@ -202,5 +202,3 @@ pub struct ProcessExitedNotification {
     /// final stderr `process/outputDelta` notification.
     pub stderr_cap_reached: bool,
 }
-
-

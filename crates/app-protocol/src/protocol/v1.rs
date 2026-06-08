@@ -1,4 +1,4 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use runtime_protocol::ThreadId;
@@ -14,11 +14,11 @@ use runtime_protocol::protocol::ReviewDecision;
 use runtime_protocol::protocol::SandboxPolicy;
 use runtime_protocol::protocol::SessionSource;
 use runtime_protocol::protocol::TurnAbortReason;
-use utils_absolute_path::AbsolutePathBuf;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
 use ts_rs::TS;
+use utils_absolute_path::AbsolutePathBuf;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
@@ -202,4 +202,3 @@ pub struct SandboxSettings {
 pub struct InterruptConversationResponse {
     pub abort_reason: TurnAbortReason,
 }
-

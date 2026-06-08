@@ -1,8 +1,7 @@
-﻿use super::ApprovalsReviewer;
+use super::ApprovalsReviewer;
 use super::AskForApproval;
 use super::SandboxMode;
 use super::WindowsSandboxSetupMode;
-use super::shared::default_enabled;
 use experimental_api_macros::ExperimentalApi;
 use runtime_protocol::config_types::AutoCompactTokenLimitScope;
 use runtime_protocol::config_types::ReasoningSummary;
@@ -10,7 +9,6 @@ use runtime_protocol::config_types::Verbosity;
 use runtime_protocol::config_types::WebSearchMode;
 use runtime_protocol::config_types::WebSearchToolConfig;
 use runtime_protocol::model_capabilities::ReasoningEffort;
-use utils_absolute_path::AbsolutePathBuf;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -19,23 +17,13 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use ts_rs::TS;
+use utils_absolute_path::AbsolutePathBuf;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(tag = "type", rename_all = "camelCase")]
 #[ts(tag = "type")]
 #[ts(export_to = "v2/")]
 pub enum ConfigLayerSource {
-    /// Managed preferences layer delivered by MDM (macOS only).
-    #[serde(rename_all = "camelCase")]
-    #[ts(rename_all = "camelCase")]
-    Mdm {
-        domain: String,
-        key: String,
-    },
-
-    /// Managed config layer from a file (usually `managed_config.toml`).
-    #[serde(rename_all = "camelCase")]
-    #[ts(rename_all = "camelCase")]
     System {
         /// This is the path to the system config.toml file, though it is not
         /// guaranteed to exist.
@@ -62,24 +50,10 @@ pub enum ConfigLayerSource {
     /// these between `cwd` and the project/repo root.
     #[serde(rename_all = "camelCase")]
     #[ts(rename_all = "camelCase")]
-    Project {
-        project_config_dir: AbsolutePathBuf,
-    },
+    Project { project_config_dir: AbsolutePathBuf },
 
     /// Session-layer overrides supplied via `-c`/`--config`.
     SessionFlags,
-
-    /// `managed_config.toml` was designed to be a config that was loaded
-    /// as the last layer on top of everything else. This scheme did not quite
-    /// work out as intended, but we keep this variant as a "best effort" while
-    /// we phase out `managed_config.toml` in favor of `requirements.toml`.
-    #[serde(rename_all = "camelCase")]
-    #[ts(rename_all = "camelCase")]
-    LegacyManagedConfigTomlFromFile {
-        file: AbsolutePathBuf,
-    },
-
-    LegacyManagedConfigTomlFromMdm,
 }
 
 impl ConfigLayerSource {
@@ -87,7 +61,6 @@ impl ConfigLayerSource {
     /// from a layer with a lower precedence.
     pub fn precedence(&self) -> i16 {
         match self {
-            ConfigLayerSource::Mdm { .. } => 0,
             ConfigLayerSource::System { .. } => 10,
             ConfigLayerSource::User { profile, .. } => {
                 if profile.is_some() {
@@ -98,8 +71,6 @@ impl ConfigLayerSource {
             }
             ConfigLayerSource::Project { .. } => 25,
             ConfigLayerSource::SessionFlags => 30,
-            ConfigLayerSource::LegacyManagedConfigTomlFromFile { .. } => 40,
-            ConfigLayerSource::LegacyManagedConfigTomlFromMdm => 50,
         }
     }
 }
@@ -142,67 +113,6 @@ pub struct AnalyticsConfig {
     pub additional: HashMap<String, JsonValue>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(export_to = "v2/")]
-pub enum AppToolApproval {
-    Auto,
-    Prompt,
-    Approve,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(export_to = "v2/")]
-pub struct AppsDefaultConfig {
-    #[serde(default = "default_enabled")]
-    pub enabled: bool,
-    #[serde(default = "default_enabled")]
-    pub destructive_enabled: bool,
-    #[serde(default = "default_enabled")]
-    pub open_world_enabled: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(export_to = "v2/")]
-pub struct AppToolConfig {
-    pub enabled: Option<bool>,
-    pub approval_mode: Option<AppToolApproval>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(export_to = "v2/")]
-pub struct AppToolsConfig {
-    #[serde(default, flatten)]
-    pub tools: HashMap<String, AppToolConfig>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(export_to = "v2/")]
-pub struct AppConfig {
-    #[serde(default = "default_enabled")]
-    pub enabled: bool,
-    pub approvals_reviewer: Option<ApprovalsReviewer>,
-    pub destructive_enabled: Option<bool>,
-    pub open_world_enabled: Option<bool>,
-    pub default_tools_approval_mode: Option<AppToolApproval>,
-    pub default_tools_enabled: Option<bool>,
-    pub tools: Option<AppToolsConfig>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(export_to = "v2/")]
-pub struct AppsConfig {
-    #[serde(default, rename = "_default")]
-    pub default: Option<AppsDefaultConfig>,
-    #[serde(default, flatten)]
-    pub apps: HashMap<String, AppConfig>,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS, ExperimentalApi)]
 #[serde(rename_all = "snake_case")]
 #[ts(export_to = "v2/")]
@@ -231,9 +141,6 @@ pub struct Config {
     pub model_verbosity: Option<Verbosity>,
     pub service_tier: Option<String>,
     pub analytics: Option<AnalyticsConfig>,
-    #[experimental("config/read.apps")]
-    #[serde(default)]
-    pub apps: Option<AppsConfig>,
     pub desktop: Option<HashMap<String, JsonValue>>,
     #[serde(default, flatten)]
     pub additional: HashMap<String, JsonValue>,
@@ -487,7 +394,7 @@ pub enum ResidencyRequirement {
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
 pub struct ConfigRequirementsReadResponse {
-    /// Null if no requirements are configured (e.g. no requirements.toml/MDM entries).
+    /// Null if no requirements are configured, e.g. no requirements.toml entries.
     #[experimental(nested)]
     pub requirements: Option<ConfigRequirements>,
 }
@@ -711,4 +618,3 @@ pub struct ConfigWarningNotification {
     #[ts(optional)]
     pub range: Option<TextRange>,
 }
-

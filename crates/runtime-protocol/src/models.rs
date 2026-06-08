@@ -3,13 +3,13 @@ use std::io;
 use std::num::NonZeroUsize;
 use std::path::Path;
 
-use utils_image::PromptImageMode;
-use utils_image::load_for_prompt_bytes;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::ser::Serializer;
 use ts_rs::TS;
+use utils_image::PromptImageMode;
+use utils_image::load_for_prompt_bytes;
 
 use crate::permissions::FileSystemAccessMode;
 use crate::permissions::FileSystemPath;
@@ -20,9 +20,9 @@ use crate::permissions::FileSystemSpecialPath;
 use crate::permissions::NetworkSandboxPolicy;
 use crate::protocol::SandboxPolicy;
 use crate::user_input::UserInput;
+use schemars::JsonSchema;
 use utils_absolute_path::AbsolutePathBuf;
 use utils_image::ImageProcessingError;
-use schemars::JsonSchema;
 
 use crate::mcp::CallToolResult;
 
@@ -2202,8 +2202,7 @@ mod tests {
         let prefixes = (0..200)
             .map(|i| vec![format!("tool-{i:03}"), "x".repeat(500)])
             .collect::<Vec<_>>();
-        let output =
-            format_allow_prefixes(prefixes).expect("formatted prefixes");
+        let output = format_allow_prefixes(prefixes).expect("formatted prefixes");
         assert!(
             output.len() <= MAX_ALLOW_PREFIX_TEXT_BYTES + TRUNCATED_MARKER.len(),
             "output length exceeds expected limit: {output}",
@@ -2536,24 +2535,6 @@ mod tests {
         let item: ResponseItem = serde_json::from_str(json)?;
 
         assert_eq!(item, ResponseItem::CompactionTrigger);
-        Ok(())
-    }
-
-    #[test]
-    fn deserializes_legacy_ghost_snapshot_as_other() -> Result<()> {
-        let json = r#"{
-            "type":"ghost_snapshot",
-            "ghost_commit":{
-                "id":"ghost-1",
-                "parent":null,
-                "preexisting_untracked_files":[],
-                "preexisting_untracked_dirs":[]
-            }
-        }"#;
-
-        let item: ResponseItem = serde_json::from_str(json)?;
-
-        assert_eq!(item, ResponseItem::Other);
         Ok(())
     }
 

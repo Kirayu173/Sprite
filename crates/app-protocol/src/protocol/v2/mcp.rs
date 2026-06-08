@@ -1,4 +1,4 @@
-﻿use super::shared::v2_enum_from_core;
+use super::shared::v2_enum_from_core;
 use runtime_protocol::approvals::ElicitationRequest as CoreElicitationRequest;
 use runtime_protocol::items::McpToolCallError as CoreMcpToolCallError;
 use runtime_protocol::mcp::CallToolResult as CoreMcpCallToolResult;
@@ -676,4 +676,3 @@ impl From<rmcp::model::CreateElicitationResult> for McpServerElicitationRequestR
         }
     }
 }
-

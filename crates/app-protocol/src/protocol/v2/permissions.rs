@@ -15,13 +15,13 @@ use runtime_protocol::permissions::FileSystemSpecialPath as CoreFileSystemSpecia
 use runtime_protocol::protocol::NetworkAccess as CoreNetworkAccess;
 use runtime_protocol::request_permissions::PermissionGrantScope as CorePermissionGrantScope;
 use runtime_protocol::request_permissions::RequestPermissionProfile as CoreRequestPermissionProfile;
-use utils_absolute_path::AbsolutePathBuf;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use ts_rs::TS;
+use utils_absolute_path::AbsolutePathBuf;
 
 v2_enum_from_core! {
     pub enum NetworkApprovalProtocol from CoreNetworkApprovalProtocol {

@@ -11,15 +11,18 @@ Before implementing:
 - If there is a simpler approach, say so; push back when pushback is warranted.
 - If something is unclear, stop first: explain what is unclear, then ask.
 
-## 2. Prefer Simplicity
+## 2. Choose for Long-Term Value
 
-**Solve the problem with the least code. Do not write speculative code.**
+**Prefer the implementation that yields the optimal, longest-lasting benefit, and always consider the overall architecture before choosing an approach.**
 
-- Do not add features beyond the requirement.
-- Do not create abstractions for code used only once.
-- Do not add unrequested "flexibility" or "configurability".
-- Do not write error handling for scenarios that cannot occur.
-- If you wrote 200 lines where 50 would do, rewrite it. Ask yourself: "Would a senior engineer consider this overengineered?" If yes, simplify.
+When choosing between approaches:
+
+- Evaluate options against the full system architecture, not just the local change site. A solution that is locally simple but creates architectural debt, coupling, or future migration cost is not actually simple.
+- Prefer the option that maximizes long-term return — maintainability, extensibility, and alignment with the project's structural direction — even if it takes more effort now.
+- A "simplest patch" is acceptable only when the affected surface is genuinely small, isolated, and unlikely to evolve; otherwise invest in the architecturally sound solution.
+- Do not write speculative code or add unrequested features, but do not reject a more substantial change just because the immediate diff is larger, if that change is what the architecture actually needs.
+- Still trim what is unnecessary: no abstractions for code used only once at the call site, no unrequested "flexibility" or "configurability", no error handling for scenarios that cannot occur.
+- Before deciding, ask: "Does this fit the overall architecture, and will it still be the right shape years from now?" If not, redesign before implementing.
 
 ## 3. Make Precise Changes
 

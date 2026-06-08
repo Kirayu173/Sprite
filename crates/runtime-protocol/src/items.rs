@@ -24,7 +24,6 @@ use crate::protocol::WebSearchEndEvent;
 use crate::user_input::ByteRange;
 use crate::user_input::TextElement;
 use crate::user_input::UserInput;
-use utils_absolute_path::AbsolutePathBuf;
 use quick_xml::de::from_str as from_xml_str;
 use quick_xml::se::to_string as to_xml_string;
 use schemars::JsonSchema;
@@ -34,6 +33,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
 use ts_rs::TS;
+use utils_absolute_path::AbsolutePathBuf;
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Deserialize, Serialize, TS, JsonSchema)]

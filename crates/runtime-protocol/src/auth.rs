@@ -104,7 +104,6 @@ impl KnownTier {
             Self::Education => "education",
         }
     }
-
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
