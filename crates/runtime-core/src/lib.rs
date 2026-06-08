@@ -1,4 +1,2 @@
-#![allow(dead_code)]
-
-pub(crate) mod config_lock;
-pub(crate) mod diagnostics;
+pub mod config_lock;
+pub mod diagnostics;

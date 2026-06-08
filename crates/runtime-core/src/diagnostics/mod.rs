@@ -1,3 +1,3 @@
-pub(crate) mod memory_usage;
-pub(crate) mod prompt_debug;
-pub(crate) mod tool_dispatch_trace;
+pub mod memory_usage;
+pub mod prompt_debug;
+pub mod tool_dispatch_trace;

@@ -9,16 +9,14 @@ use serde::de::DeserializeOwned;
 use similar::TextDiff;
 use utils_absolute_path::AbsolutePathBuf;
 
-pub(crate) const CONFIG_LOCK_VERSION: u32 = 1;
+pub const CONFIG_LOCK_VERSION: u32 = 1;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) struct ConfigLockReplayOptions {
+pub struct ConfigLockReplayOptions {
     pub allow_sprite_version_mismatch: bool,
 }
 
-pub(crate) async fn read_config_lock_from_path(
-    path: &AbsolutePathBuf,
-) -> io::Result<ConfigLockfileToml> {
+pub async fn read_config_lock_from_path(path: &AbsolutePathBuf) -> io::Result<ConfigLockfileToml> {
     let contents = tokio::fs::read_to_string(path).await.map_err(|err| {
         config_lock_error(format!(
             "failed to read config lock file {}: {err}",
@@ -35,7 +33,7 @@ pub(crate) async fn read_config_lock_from_path(
     Ok(lockfile)
 }
 
-pub(crate) fn config_lockfile(config: ConfigToml) -> ConfigLockfileToml {
+pub fn config_lockfile(config: ConfigToml) -> ConfigLockfileToml {
     ConfigLockfileToml {
         version: CONFIG_LOCK_VERSION,
         sprite_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -43,7 +41,7 @@ pub(crate) fn config_lockfile(config: ConfigToml) -> ConfigLockfileToml {
     }
 }
 
-pub(crate) fn validate_config_lock_replay(
+pub fn validate_config_lock_replay(
     expected_lock: &ConfigLockfileToml,
     actual_lock: &ConfigLockfileToml,
     options: ConfigLockReplayOptions,
@@ -73,7 +71,7 @@ pub(crate) fn validate_config_lock_replay(
     Ok(())
 }
 
-pub(crate) fn lock_layer_from_config(
+pub fn lock_layer_from_config(
     lock_path: &AbsolutePathBuf,
     lockfile: &ConfigLockfileToml,
 ) -> io::Result<ConfigLayerEntry> {
@@ -90,7 +88,7 @@ pub(crate) fn lock_layer_from_config(
     ))
 }
 
-pub(crate) fn config_without_lock_controls(config: &ConfigToml) -> ConfigToml {
+pub fn config_without_lock_controls(config: &ConfigToml) -> ConfigToml {
     config.clone()
 }
 
@@ -142,7 +140,7 @@ fn toml_value<T: Serialize>(value: &T, label: &str) -> io::Result<toml::Value> {
         .map_err(|err| config_lock_error(format!("failed to serialize {label}: {err}")))
 }
 
-pub(crate) fn toml_round_trip<T>(value: &impl Serialize, label: &'static str) -> io::Result<T>
+pub fn toml_round_trip<T>(value: &impl Serialize, label: &'static str) -> io::Result<T>
 where
     T: DeserializeOwned + Serialize,
 {

@@ -19,6 +19,16 @@ similar = { workspace = true }
 tokio = { workspace = true, features = ["fs", "rt"] }
 toml = { workspace = true }
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
 [lib]
 name = "runtime_core"
 path = "src/lib.rs"

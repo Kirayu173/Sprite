@@ -2625,9 +2625,11 @@ dependencies = [
  "serde",
  "serde_json",
  "similar",
+ "tempfile",
  "tokio",
  "toml",
  "utils-absolute-path",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
