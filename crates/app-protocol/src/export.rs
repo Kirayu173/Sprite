@@ -47,8 +47,7 @@ const SPECIAL_DEFINITIONS: &[&str] = &[
     "ServerRequest",
 ];
 const FLAT_V2_SHARED_DEFINITIONS: &[&str] = &["ClientRequest", "ServerNotification"];
-const V1_CLIENT_REQUEST_METHODS: &[&str] =
-    &["getConversationSummary", "gitDiffToRemote", "getAuthStatus"];
+const V1_CLIENT_REQUEST_METHODS: &[&str] = &["getConversationSummary", "gitDiffToRemote"];
 const EXCLUDED_SERVER_NOTIFICATION_METHODS_FOR_JSON: &[&str] = &["rawResponseItem/completed"];
 
 #[derive(Clone)]

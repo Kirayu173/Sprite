@@ -27,50 +27,50 @@ use runtime_protocol::protocol::TurnAbortReason;
 use serde::Serialize;
 
 use crate::AgentThreadId;
-use crate::CodexTurnId;
 use crate::ExecutionStatus;
 use crate::RawTraceEventPayload;
+use crate::RuntimeActivationId;
 
-pub(crate) struct CodexTurnTraceEvent {
-    pub context_turn_id: CodexTurnId,
+pub(crate) struct RuntimeActivationTraceEvent {
+    pub context_activation_id: RuntimeActivationId,
     pub payload: RawTraceEventPayload,
 }
 
-pub(crate) fn codex_turn_trace_event(
+pub(crate) fn runtime_activation_trace_event(
     thread_id: AgentThreadId,
     default_turn_id: &str,
     event: &EventMsg,
-) -> Option<CodexTurnTraceEvent> {
+) -> Option<RuntimeActivationTraceEvent> {
     match event {
         EventMsg::TurnStarted(event) => {
-            let codex_turn_id = event.turn_id.clone();
-            Some(CodexTurnTraceEvent {
-                context_turn_id: codex_turn_id.clone(),
-                payload: RawTraceEventPayload::CodexTurnStarted {
-                    codex_turn_id,
+            let runtime_activation_id = event.turn_id.clone();
+            Some(RuntimeActivationTraceEvent {
+                context_activation_id: runtime_activation_id.clone(),
+                payload: RawTraceEventPayload::RuntimeActivationStarted {
+                    runtime_activation_id,
                     thread_id,
                 },
             })
         }
         EventMsg::TurnComplete(event) => {
-            let codex_turn_id = event.turn_id.clone();
-            Some(CodexTurnTraceEvent {
-                context_turn_id: codex_turn_id.clone(),
-                payload: RawTraceEventPayload::CodexTurnEnded {
-                    codex_turn_id,
+            let runtime_activation_id = event.turn_id.clone();
+            Some(RuntimeActivationTraceEvent {
+                context_activation_id: runtime_activation_id.clone(),
+                payload: RawTraceEventPayload::RuntimeActivationEnded {
+                    runtime_activation_id,
                     status: ExecutionStatus::Completed,
                 },
             })
         }
         EventMsg::TurnAborted(event) => {
-            let codex_turn_id = event
+            let runtime_activation_id = event
                 .turn_id
                 .clone()
                 .unwrap_or_else(|| default_turn_id.to_string());
-            Some(CodexTurnTraceEvent {
-                context_turn_id: codex_turn_id.clone(),
-                payload: RawTraceEventPayload::CodexTurnEnded {
-                    codex_turn_id,
+            Some(RuntimeActivationTraceEvent {
+                context_activation_id: runtime_activation_id.clone(),
+                payload: RawTraceEventPayload::RuntimeActivationEnded {
+                    runtime_activation_id,
                     status: execution_status_for_abort_reason(&event.reason),
                 },
             })

@@ -1,4 +1,4 @@
-//! Trace bundle format, writer, and reducer for Sprite rollouts.
+﻿//! Trace bundle format, writer, and reducer for Sprite rollouts.
 //!
 //! This crate owns the trace schema. Hot-path Sprite code should depend on the
 //! small writer API here; semantic replay and viewer projections stay outside

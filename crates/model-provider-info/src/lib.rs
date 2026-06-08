@@ -40,6 +40,8 @@ const CHAT_WIRE_API_REMOVED_ERROR: &str = "`wire_api = \"chat\"` is no longer su
 pub const LEGACY_OLLAMA_CHAT_PROVIDER_ID: &str = "ollama-chat";
 pub const OLLAMA_CHAT_PROVIDER_REMOVED_ERROR: &str =
     "`ollama-chat` is no longer supported. Replace it with `ollama`.";
+pub const OPENAI_BASE_URL_REQUIRED_ERROR: &str =
+    "OpenAI-compatible providers must set `base_url` explicitly";
 
 pub type ProviderResult<T> = std::result::Result<T, ProviderConfigError>;
 
@@ -50,6 +52,8 @@ pub enum ProviderConfigError {
         var: String,
         instructions: Option<String>,
     },
+    #[error("{provider}: {message}", message = OPENAI_BASE_URL_REQUIRED_ERROR)]
+    MissingBaseUrl { provider: String },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -245,11 +249,12 @@ impl ModelProviderInfo {
     }
 
     pub fn to_api_provider(&self) -> ProviderResult<ApiProvider> {
-        let default_base_url = "https://api.openai.com/v1";
-        let base_url = self
-            .base_url
-            .clone()
-            .unwrap_or_else(|| default_base_url.to_string());
+        let base_url =
+            self.base_url
+                .clone()
+                .ok_or_else(|| ProviderConfigError::MissingBaseUrl {
+                    provider: self.name.clone(),
+                })?;
 
         let headers = self.build_header_map()?;
         let retry = ApiRetryConfig {
@@ -333,17 +338,7 @@ impl ModelProviderInfo {
                     .into_iter()
                     .collect(),
             ),
-            env_http_headers: Some(
-                [
-                    (
-                        "OpenAI-Organization".to_string(),
-                        "OPENAI_ORGANIZATION".to_string(),
-                    ),
-                    ("OpenAI-Project".to_string(), "OPENAI_PROJECT".to_string()),
-                ]
-                .into_iter()
-                .collect(),
-            ),
+            env_http_headers: None,
             // Use global defaults for retry/timeout unless overridden in config.toml.
             request_max_retries: None,
             stream_max_retries: None,

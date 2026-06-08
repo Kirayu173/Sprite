@@ -36,7 +36,7 @@ impl TraceReducer {
         wall_time_unix_ms: i64,
         inference_call_id: &InferenceCallId,
         thread_id: &str,
-        codex_turn_id: &str,
+        runtime_activation_id: &str,
         request_payload: &RawPayloadRef,
     ) -> Result<Vec<String>> {
         let payload = self.read_payload_json(request_payload)?;
@@ -93,7 +93,7 @@ impl TraceReducer {
                 items,
                 ReconcileItems {
                     thread_id,
-                    codex_turn_id,
+                    runtime_activation_id,
                     wall_time_unix_ms,
                     produced_by: Vec::new(),
                     start_index: item_ids.len(),
@@ -108,7 +108,7 @@ impl TraceReducer {
                 items,
                 ReconcileItems {
                     thread_id,
-                    codex_turn_id,
+                    runtime_activation_id,
                     wall_time_unix_ms,
                     produced_by: Vec::new(),
                     start_index: 0,
@@ -143,11 +143,16 @@ impl TraceReducer {
             );
         };
 
-        let Some((thread_id, codex_turn_id)) = self
+        let Some((thread_id, runtime_activation_id)) = self
             .rollout
             .inference_calls
             .get(inference_call_id)
-            .map(|inference| (inference.thread_id.clone(), inference.codex_turn_id.clone()))
+            .map(|inference| {
+                (
+                    inference.thread_id.clone(),
+                    inference.runtime_activation_id.clone(),
+                )
+            })
         else {
             bail!("inference response referenced unknown call {inference_call_id}");
         };
@@ -163,7 +168,7 @@ impl TraceReducer {
             items,
             ReconcileItems {
                 thread_id: &thread_id,
-                codex_turn_id: &codex_turn_id,
+                runtime_activation_id: &runtime_activation_id,
                 wall_time_unix_ms,
                 produced_by: vec![ProducerRef::Inference {
                     inference_call_id: inference_call_id.clone(),
@@ -218,17 +223,17 @@ impl TraceReducer {
                         .unwrap_or_else(|| {
                             self.create_conversation_item(
                                 context.thread_id,
-                                Some(context.codex_turn_id.to_string()),
+                                Some(context.runtime_activation_id.to_string()),
                                 context.wall_time_unix_ms,
                                 item,
                                 context.produced_by.clone(),
                             )
                         })
                 } else {
-                    let codex_turn_id = context.codex_turn_id;
+                    let runtime_activation_id = context.runtime_activation_id;
                     let thread_id = context.thread_id;
                     bail!(
-                        "model conversation mismatch while reducing turn {codex_turn_id} for \
+                        "model conversation mismatch while reducing turn {runtime_activation_id} for \
                          thread {thread_id} at item index {index}: existing item \
                          {previous_item_id} does not match the current model payload item"
                     );
@@ -238,7 +243,7 @@ impl TraceReducer {
                     .unwrap_or_else(|| {
                         self.create_conversation_item(
                             context.thread_id,
-                            Some(context.codex_turn_id.to_string()),
+                            Some(context.runtime_activation_id.to_string()),
                             context.wall_time_unix_ms,
                             item,
                             context.produced_by.clone(),
@@ -247,7 +252,7 @@ impl TraceReducer {
             } else {
                 self.create_conversation_item(
                     context.thread_id,
-                    Some(context.codex_turn_id.to_string()),
+                    Some(context.runtime_activation_id.to_string()),
                     context.wall_time_unix_ms,
                     item,
                     context.produced_by.clone(),
@@ -284,7 +289,7 @@ impl TraceReducer {
         &mut self,
         wall_time_unix_ms: i64,
         thread_id: &str,
-        codex_turn_id: &str,
+        runtime_activation_id: &str,
         compaction_id: &CompactionId,
         checkpoint_payload: &RawPayloadRef,
     ) -> Result<ReducedCompactionCheckpoint> {
@@ -305,7 +310,7 @@ impl TraceReducer {
             input_items,
             DetachedReconcileItems {
                 thread_id,
-                codex_turn_id,
+                runtime_activation_id,
                 wall_time_unix_ms,
                 produced_by: Vec::new(),
                 candidates: input_candidates,
@@ -316,7 +321,7 @@ impl TraceReducer {
         // the provider-visible summary item if the compact endpoint returned one.
         let marker_item_id = self.create_conversation_item(
             thread_id,
-            Some(codex_turn_id.to_string()),
+            Some(runtime_activation_id.to_string()),
             wall_time_unix_ms,
             NormalizedConversationItem {
                 role: ConversationRole::Assistant,
@@ -335,7 +340,7 @@ impl TraceReducer {
             replacement_items,
             DetachedReconcileItems {
                 thread_id,
-                codex_turn_id,
+                runtime_activation_id,
                 wall_time_unix_ms,
                 produced_by: vec![ProducerRef::Compaction {
                     compaction_id: compaction_id.clone(),
@@ -371,7 +376,7 @@ impl TraceReducer {
                 .unwrap_or_else(|| {
                     self.create_conversation_item(
                         context.thread_id,
-                        Some(context.codex_turn_id.to_string()),
+                        Some(context.runtime_activation_id.to_string()),
                         context.wall_time_unix_ms,
                         item,
                         context.produced_by.clone(),
@@ -403,7 +408,7 @@ impl TraceReducer {
     fn create_conversation_item(
         &mut self,
         thread_id: &str,
-        codex_turn_id: Option<String>,
+        runtime_activation_id: Option<String>,
         first_seen_at_unix_ms: i64,
         item: NormalizedConversationItem,
         produced_by: Vec<ProducerRef>,
@@ -414,7 +419,7 @@ impl TraceReducer {
             ConversationItem {
                 item_id: item_id.clone(),
                 thread_id: thread_id.to_string(),
-                codex_turn_id,
+                runtime_activation_id,
                 first_seen_at_unix_ms,
                 role: item.role,
                 channel: item.channel,
@@ -525,7 +530,7 @@ enum ReconcileMode {
 
 struct ReconcileItems<'a> {
     thread_id: &'a str,
-    codex_turn_id: &'a str,
+    runtime_activation_id: &'a str,
     wall_time_unix_ms: i64,
     produced_by: Vec<ProducerRef>,
     start_index: usize,
@@ -535,7 +540,7 @@ struct ReconcileItems<'a> {
 
 struct DetachedReconcileItems<'a> {
     thread_id: &'a str,
-    codex_turn_id: &'a str,
+    runtime_activation_id: &'a str,
     wall_time_unix_ms: i64,
     produced_by: Vec<ProducerRef>,
     candidates: Vec<String>,

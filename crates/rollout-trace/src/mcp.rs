@@ -1,4 +1,4 @@
-//! Hot-path helpers for correlating concrete MCP executions with rollout traces.
+﻿//! Hot-path helpers for correlating concrete MCP executions with rollout traces.
 //!
 //! Core decides when an MCP request is actually going to execute. The trace
 //! crate owns the globally unique ID, the trace event that preserves it in the

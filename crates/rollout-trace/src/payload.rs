@@ -1,4 +1,4 @@
-//! References to heavyweight trace payloads stored outside the reduced graph.
+﻿//! References to heavyweight trace payloads stored outside the reduced graph.
 
 use serde::Deserialize;
 use serde::Serialize;

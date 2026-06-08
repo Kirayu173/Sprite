@@ -104,15 +104,6 @@ pub struct ToolsV2 {
     pub web_search: Option<WebSearchToolConfig>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(export_to = "v2/")]
-pub struct AnalyticsConfig {
-    pub enabled: Option<bool>,
-    #[serde(default, flatten)]
-    pub additional: HashMap<String, JsonValue>,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS, ExperimentalApi)]
 #[serde(rename_all = "snake_case")]
 #[ts(export_to = "v2/")]
@@ -140,7 +131,6 @@ pub struct Config {
     pub model_reasoning_summary: Option<ReasoningSummary>,
     pub model_verbosity: Option<Verbosity>,
     pub service_tier: Option<String>,
-    pub analytics: Option<AnalyticsConfig>,
     pub desktop: Option<HashMap<String, JsonValue>>,
     #[serde(default, flatten)]
     pub additional: HashMap<String, JsonValue>,

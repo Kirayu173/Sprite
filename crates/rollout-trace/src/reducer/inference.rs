@@ -1,4 +1,4 @@
-//! Inference call lifecycle reduction.
+﻿//! Inference call lifecycle reduction.
 //!
 //! Conversation request/response normalization lives in the conversation module;
 //! this module owns the runtime envelope around those model-facing payloads.
@@ -22,7 +22,7 @@ use crate::raw_event::RawTraceEventPayload;
 pub(super) struct StartedInferenceCall {
     pub(super) inference_call_id: InferenceCallId,
     pub(super) thread_id: String,
-    pub(super) codex_turn_id: String,
+    pub(super) runtime_activation_id: String,
     pub(super) model: String,
     pub(super) provider_name: String,
     pub(super) request_payload: RawPayloadRef,
@@ -52,17 +52,17 @@ impl TraceReducer {
 
         let inference_call_id = started.inference_call_id.clone();
         let thread_id = started.thread_id.clone();
-        let codex_turn_id = started.codex_turn_id.clone();
+        let runtime_activation_id = started.runtime_activation_id.clone();
         let request_payload = started.request_payload.clone();
-        let Some(turn) = self.rollout.codex_turns.get(&codex_turn_id) else {
+        let Some(turn) = self.rollout.runtime_activations.get(&runtime_activation_id) else {
             bail!(
-                "inference start {inference_call_id} referenced unknown codex turn {codex_turn_id}"
+                "inference start {inference_call_id} referenced unknown runtime activation {runtime_activation_id}"
             );
         };
         if turn.thread_id != thread_id {
             bail!(
                 "inference start {inference_call_id} used thread {thread_id}, \
-                 but codex turn {codex_turn_id} belongs to {}",
+                 but runtime activation {runtime_activation_id} belongs to {}",
                 turn.thread_id
             );
         }
@@ -71,7 +71,7 @@ impl TraceReducer {
             wall_time_unix_ms,
             &inference_call_id,
             &thread_id,
-            &codex_turn_id,
+            &runtime_activation_id,
             &request_payload,
         )?;
 
@@ -82,7 +82,7 @@ impl TraceReducer {
             InferenceCall {
                 inference_call_id,
                 thread_id,
-                codex_turn_id,
+                runtime_activation_id,
                 execution: ExecutionWindow {
                     started_at_unix_ms: wall_time_unix_ms,
                     started_seq: seq,
@@ -114,7 +114,7 @@ impl TraceReducer {
         &mut self,
         seq: RawEventSeq,
         wall_time_unix_ms: i64,
-        codex_turn_id: &str,
+        runtime_activation_id: &str,
         turn_status: &ExecutionStatus,
     ) {
         let inference_status = match turn_status {
@@ -124,7 +124,7 @@ impl TraceReducer {
             ExecutionStatus::Aborted => ExecutionStatus::Aborted,
         };
         for inference in self.rollout.inference_calls.values_mut() {
-            if inference.codex_turn_id == codex_turn_id
+            if inference.runtime_activation_id == runtime_activation_id
                 && inference.execution.status == ExecutionStatus::Running
             {
                 inference.execution.ended_at_unix_ms = Some(wall_time_unix_ms);

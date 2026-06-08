@@ -1,4 +1,4 @@
-//! Terminal reduction for exec-like tool calls.
+﻿//! Terminal reduction for exec-like tool calls.
 //!
 //! The raw trace records terminal activity as normal tool lifecycle events.
 //! Protocol-backed exec events carry `ExecCommand*` payloads with the richest

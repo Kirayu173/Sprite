@@ -20,9 +20,9 @@ use tracing::warn;
 
 use crate::model::AgentThreadId;
 use crate::model::CodeModeRuntimeToolId;
-use crate::model::CodexTurnId;
 use crate::model::ExecutionStatus;
 use crate::model::ModelVisibleCallId;
+use crate::model::RuntimeActivationId;
 use crate::model::ToolCallId;
 use crate::model::ToolCallKind;
 use crate::model::ToolCallSummary;
@@ -51,14 +51,14 @@ enum ToolDispatchTraceContextState {
 struct EnabledToolDispatchTraceContext {
     writer: Arc<TraceWriter>,
     thread_id: AgentThreadId,
-    codex_turn_id: CodexTurnId,
+    runtime_activation_id: RuntimeActivationId,
     tool_call_id: ToolCallId,
 }
 
 /// Core-facing request data for the canonical runtime tool boundary.
 pub struct ToolDispatchInvocation {
     pub thread_id: AgentThreadId,
-    pub codex_turn_id: CodexTurnId,
+    pub runtime_activation_id: RuntimeActivationId,
     pub tool_call_id: ToolCallId,
     pub tool_name: String,
     pub tool_namespace: Option<String>,
@@ -132,7 +132,7 @@ enum DispatchedToolTraceResponse<'a> {
 
 impl ToolDispatchTraceContext {
     /// Builds a context that accepts trace calls and records nothing.
-    pub(crate) fn disabled() -> Self {
+    pub fn disabled() -> Self {
         Self {
             state: ToolDispatchTraceContextState::Disabled,
         }
@@ -147,7 +147,7 @@ impl ToolDispatchTraceContext {
     }
 
     /// Starts one dispatch-level lifecycle and returns the handle for its result.
-    pub(crate) fn start(writer: Arc<TraceWriter>, invocation: ToolDispatchInvocation) -> Self {
+    pub fn start(writer: Arc<TraceWriter>, invocation: ToolDispatchInvocation) -> Self {
         if suppresses_tool_dispatch_trace(&invocation) {
             return Self::disabled();
         }
@@ -155,7 +155,7 @@ impl ToolDispatchTraceContext {
         let context = EnabledToolDispatchTraceContext {
             writer,
             thread_id: invocation.thread_id.clone(),
-            codex_turn_id: invocation.codex_turn_id.clone(),
+            runtime_activation_id: invocation.runtime_activation_id.clone(),
             tool_call_id: invocation.tool_call_id.clone(),
         };
         record_started(&context, invocation);
@@ -384,7 +384,7 @@ fn append_with_context_best_effort(
 ) {
     let event_context = RawTraceEventContext {
         thread_id: Some(context.thread_id.clone()),
-        codex_turn_id: Some(context.codex_turn_id.clone()),
+        runtime_activation_id: Some(context.runtime_activation_id.clone()),
     };
     if let Err(err) = context.writer.append_with_context(event_context, payload) {
         warn!("failed to append rollout trace event: {err:#}");
@@ -437,7 +437,7 @@ mod tests {
     ) -> ToolDispatchInvocation {
         ToolDispatchInvocation {
             thread_id: "thread-1".to_string(),
-            codex_turn_id: "turn-1".to_string(),
+            runtime_activation_id: "turn-1".to_string(),
             tool_call_id: "tool-call-1".to_string(),
             tool_name: tool_name.to_string(),
             tool_namespace,

@@ -1,4 +1,4 @@
-use pretty_assertions::assert_eq;
+﻿use pretty_assertions::assert_eq;
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -953,7 +953,7 @@ fn tool_call_links_model_call_and_followup_output_items() -> anyhow::Result<()> 
 }
 
 #[test]
-fn inference_start_rejects_unknown_codex_turn() -> anyhow::Result<()> {
+fn inference_start_rejects_unknown_runtime_activation() -> anyhow::Result<()> {
     let temp = TempDir::new()?;
     let writer = create_started_writer(&temp)?;
 
@@ -965,5 +965,5 @@ fn inference_start_rejects_unknown_codex_turn() -> anyhow::Result<()> {
     )?;
     append_inference_start(&writer, "inference-1", "turn-missing", request)?;
 
-    expect_replay_error(&temp, "referenced unknown codex turn turn-missing")
+    expect_replay_error(&temp, "referenced unknown runtime activation turn-missing")
 }

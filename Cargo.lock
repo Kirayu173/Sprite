@@ -744,6 +744,8 @@ name = "file-system"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "tempfile",
+ "tokio",
  "utils-absolute-path",
 ]
 
@@ -978,6 +980,8 @@ dependencies = [
 name = "git-utils"
 version = "0.1.0"
 dependencies = [
+ "tempfile",
+ "tokio",
  "utils-absolute-path",
 ]
 
@@ -2615,7 +2619,11 @@ name = "runtime-core"
 version = "0.1.0"
 dependencies = [
  "config",
+ "diagnostics",
+ "rollout-trace",
+ "runtime-protocol",
  "serde",
+ "serde_json",
  "similar",
  "tokio",
  "toml",

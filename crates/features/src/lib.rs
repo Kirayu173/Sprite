@@ -64,3 +64,26 @@ pub enum FeatureConfigSource {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Features;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn known_feature_keys_are_explicit_phase1_keys() {
+        assert!(is_known_feature_key("artifact"));
+        assert!(is_known_feature_key("code_mode"));
+        assert!(is_known_feature_key("network_proxy"));
+        assert!(!is_known_feature_key("app_mcp_path_override"));
+        assert!(!is_known_feature_key("multi_agent"));
+    }
+
+    #[test]
+    fn feature_toml_accepts_enabled_and_config_payload() {
+        let parsed: FeatureToml<NetworkProxyConfigToml> =
+            serde_json::from_value(serde_json::json!({ "enabled": true })).expect("feature config");
+
+        assert_eq!(parsed.enabled, Some(true));
+        assert_eq!(parsed.config, Some(NetworkProxyConfigToml {}));
+    }
+}

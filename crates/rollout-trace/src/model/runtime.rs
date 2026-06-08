@@ -10,13 +10,13 @@ use super::AgentPath;
 use super::AgentThreadId;
 use super::CodeCellId;
 use super::CodeModeRuntimeToolId;
-use super::CodexTurnId;
 use super::CompactionId;
 use super::CompactionRequestId;
 use super::ConversationItemId;
 use super::EdgeId;
 use super::McpCallId;
 use super::ModelVisibleCallId;
+use super::RuntimeActivationId;
 use super::TerminalId;
 use super::TerminalOperationId;
 use super::ToolCallId;
@@ -34,7 +34,7 @@ pub struct CodeCell {
     pub code_cell_id: CodeCellId,
     pub model_visible_call_id: ModelVisibleCallId,
     pub thread_id: AgentThreadId,
-    pub codex_turn_id: CodexTurnId,
+    pub runtime_activation_id: RuntimeActivationId,
     /// Conversation item containing the model-authored JavaScript.
     pub source_item_id: ConversationItemId,
     pub output_item_ids: Vec<ConversationItemId>,
@@ -81,7 +81,7 @@ pub enum CodeCellRuntimeStatus {
 pub struct Compaction {
     pub compaction_id: CompactionId,
     pub thread_id: AgentThreadId,
-    pub codex_turn_id: CodexTurnId,
+    pub runtime_activation_id: RuntimeActivationId,
     pub installed_at_unix_ms: i64,
     /// Structural conversation item marking where pre-compaction history ended.
     pub marker_item_id: ConversationItemId,
@@ -99,7 +99,7 @@ pub struct CompactionRequest {
     pub compaction_request_id: CompactionRequestId,
     pub compaction_id: CompactionId,
     pub thread_id: AgentThreadId,
-    pub codex_turn_id: CodexTurnId,
+    pub runtime_activation_id: RuntimeActivationId,
     pub execution: ExecutionWindow,
     pub model: String,
     pub provider_name: String,
@@ -124,7 +124,7 @@ pub struct ToolCall {
     pub code_mode_runtime_tool_id: Option<CodeModeRuntimeToolId>,
     pub thread_id: AgentThreadId,
     /// Runtime activation that started the tool. Background work may outlive this turn.
-    pub started_by_codex_turn_id: Option<CodexTurnId>,
+    pub started_by_runtime_activation_id: Option<RuntimeActivationId>,
     pub execution: ExecutionWindow,
     pub requester: ToolCallRequester,
     pub kind: ToolCallKind,

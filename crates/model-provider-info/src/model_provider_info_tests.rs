@@ -108,7 +108,7 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
 fn test_deserialize_chat_wire_api_shows_helpful_error() {
     let provider_toml = r#"
 name = "OpenAI using Chat Completions"
-base_url = "https://api.openai.com/v1"
+base_url = "https://openai-compatible.example.invalid/v1"
 env_key = "OPENAI_API_KEY"
 wire_api = "chat"
         "#;
@@ -121,7 +121,7 @@ wire_api = "chat"
 fn test_deserialize_websocket_connect_timeout() {
     let provider_toml = r#"
 name = "OpenAI"
-base_url = "https://api.openai.com/v1"
+base_url = "https://openai-compatible.example.invalid/v1"
 websocket_connect_timeout_ms = 15000
 supports_websockets = true
         "#;

@@ -1,4 +1,4 @@
-//! Normalization from Responses-shaped JSON items into conversation item data.
+﻿//! Normalization from Responses-shaped JSON items into conversation item data.
 
 use anyhow::Result;
 use anyhow::bail;

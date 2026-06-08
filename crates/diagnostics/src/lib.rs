@@ -16,6 +16,7 @@ pub use crate::config::OtelSettings;
 pub use crate::config::OtelTlsConfig;
 pub use crate::config::validate_span_attributes;
 use crate::metrics::Result as MetricsResult;
+pub use crate::metrics::global as global_metrics;
 pub use crate::metrics::runtime_metrics::RuntimeMetricTotals;
 pub use crate::metrics::runtime_metrics::RuntimeMetricsSummary;
 pub use crate::metrics::timer::Timer;

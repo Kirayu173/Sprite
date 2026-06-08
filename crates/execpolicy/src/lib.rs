@@ -57,21 +57,15 @@ impl Policy {
         &self.rules
     }
 
-    pub fn check<F>(&self, tokens: &[String], _fallback: &F) -> Evaluation
+    pub fn check<F>(&self, tokens: &[String], fallback: &F) -> Evaluation
     where
         F: Fn(&[String]) -> Evaluation,
     {
         let Some(program) = tokens.first() else {
-            return Evaluation {
-                decision: Decision::Allow,
-                matched_rules: Vec::new(),
-            };
+            return fallback(tokens);
         };
         let Some(rules) = self.rules.get_vec(program) else {
-            return Evaluation {
-                decision: Decision::Allow,
-                matched_rules: Vec::new(),
-            };
+            return fallback(tokens);
         };
         for rule in rules {
             let rest_matches = rule
@@ -95,10 +89,7 @@ impl Policy {
                 };
             }
         }
-        Evaluation {
-            decision: Decision::Allow,
-            matched_rules: Vec::new(),
-        }
+        fallback(tokens)
     }
 }
 
@@ -116,4 +107,57 @@ pub enum RuleMatch {
         resolved_program: Option<String>,
         justification: Option<String>,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::rule::PatternToken;
+    use crate::rule::PrefixPattern;
+    use crate::rule::PrefixRule;
+
+    fn fallback(_: &[String]) -> Evaluation {
+        Evaluation {
+            decision: Decision::Prompt,
+            matched_rules: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn check_uses_matching_prefix_rule() {
+        let rule = Arc::new(PrefixRule {
+            pattern: PrefixPattern {
+                first: Arc::from("cargo"),
+                rest: Arc::from([PatternToken::Single("test".to_string())]),
+            },
+            decision: Decision::Allow,
+            justification: Some("tests are allowed".to_string()),
+        });
+        let mut rules = MultiMap::new();
+        rules.insert("cargo".to_string(), rule);
+        let policy = Policy::new(rules);
+
+        let evaluation = policy.check(&["cargo".to_string(), "test".to_string()], &fallback);
+
+        assert_eq!(evaluation.decision, Decision::Allow);
+        assert_eq!(
+            evaluation.matched_rules,
+            vec![RuleMatch::PrefixRuleMatch {
+                matched_prefix: vec!["cargo".to_string(), "test".to_string()],
+                decision: Decision::Allow,
+                resolved_program: None,
+                justification: Some("tests are allowed".to_string()),
+            }]
+        );
+    }
+
+    #[test]
+    fn check_delegates_to_fallback_without_match() {
+        let policy = Policy::default();
+
+        let evaluation = policy.check(&["cargo".to_string(), "fmt".to_string()], &fallback);
+
+        assert_eq!(evaluation.decision, Decision::Prompt);
+        assert!(evaluation.matched_rules.is_empty());
+    }
 }

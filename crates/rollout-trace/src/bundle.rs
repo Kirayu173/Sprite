@@ -1,4 +1,4 @@
-//! Trace bundle manifest and local layout constants.
+﻿//! Trace bundle manifest and local layout constants.
 
 use serde::Deserialize;
 use serde::Serialize;

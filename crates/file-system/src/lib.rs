@@ -106,10 +106,21 @@ pub trait ExecutorFileSystem: Send + Sync {
 
     async fn read_directory(
         &self,
-        _path: &AbsolutePathBuf,
+        path: &AbsolutePathBuf,
         _sandbox: Option<&FileSystemSandboxContext>,
     ) -> FileSystemResult<Vec<ReadDirectoryEntry>> {
-        Ok(Vec::new())
+        let mut entries = Vec::new();
+        for entry in std::fs::read_dir(path.as_path())? {
+            let entry = entry?;
+            let metadata = entry.metadata()?;
+            entries.push(ReadDirectoryEntry {
+                path: AbsolutePathBuf::from_absolute_path(entry.path())?,
+                metadata: FileMetadata {
+                    is_directory: metadata.is_dir(),
+                },
+            });
+        }
+        Ok(entries)
     }
 
     async fn remove(
@@ -129,5 +140,35 @@ pub trait ExecutorFileSystem: Send + Sync {
         _sandbox: Option<&FileSystemSandboxContext>,
     ) -> FileSystemResult<()> {
         std::fs::copy(from.as_path(), to.as_path()).map(|_| ())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug)]
+    struct LocalFileSystem;
+
+    impl ExecutorFileSystem for LocalFileSystem {}
+
+    #[tokio::test]
+    async fn reads_writes_and_lists_real_files() {
+        let tempdir = tempfile::tempdir().expect("tempdir");
+        let root = AbsolutePathBuf::from_absolute_path(tempdir.path()).expect("absolute tempdir");
+        let fs = LocalFileSystem;
+        let file = fs
+            .join(&root, Path::new("config.toml"))
+            .await
+            .expect("join");
+
+        fs.write_file(&file, b"model = \"local\"".to_vec(), None)
+            .await
+            .expect("write");
+        let contents = fs.read_file_text(&file, None).await.expect("read text");
+        let entries = fs.read_directory(&root, None).await.expect("read dir");
+
+        assert_eq!(contents, "model = \"local\"");
+        assert!(entries.iter().any(|entry| entry.path == file));
     }
 }

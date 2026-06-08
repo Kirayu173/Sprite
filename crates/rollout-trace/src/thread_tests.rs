@@ -1,4 +1,4 @@
-use std::cell::Cell;
+﻿use std::cell::Cell;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -116,7 +116,7 @@ fn disabled_thread_context_accepts_trace_calls_without_writing() -> anyhow::Resu
 
     thread_trace.record_ended(RolloutStatus::Completed);
     thread_trace.record_protocol_event(&EventMsg::ShutdownComplete);
-    thread_trace.record_codex_turn_event("turn-1", &EventMsg::ShutdownComplete);
+    thread_trace.record_runtime_activation_event("turn-1", &EventMsg::ShutdownComplete);
     thread_trace.record_tool_call_event("turn-1", &EventMsg::ShutdownComplete);
     thread_trace.record_agent_result_interaction(
         "turn-1",

@@ -27,6 +27,7 @@ pub const TURN_TTFT_DURATION_METRIC: &str = "sprite.turn.ttft.duration_ms";
 pub const TURN_TTFM_DURATION_METRIC: &str = "sprite.turn.ttfm.duration_ms";
 pub const TURN_NETWORK_PROXY_METRIC: &str = "sprite.turn.network_proxy";
 pub const TURN_MEMORY_METRIC: &str = "sprite.turn.memory";
+pub const MEMORIES_USAGE_METRIC: &str = "sprite.memories.usage";
 pub const TURN_TOOL_CALL_METRIC: &str = "sprite.turn.tool.call";
 pub const TURN_TOKEN_USAGE_METRIC: &str = "sprite.turn.token_usage";
 pub const GUARDIAN_REVIEW_COUNT_METRIC: &str = "sprite.guardian.review";

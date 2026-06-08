@@ -1,4 +1,4 @@
-//! Reduced rollout trace model.
+﻿//! Reduced rollout trace model.
 //!
 //! These types describe the deterministic replay output. They intentionally
 //! separate model-visible conversation from runtime/debug objects.
@@ -24,11 +24,8 @@ pub use session::*;
 pub type AgentThreadId = String;
 /// Stable multi-agent routing path such as `/root` or `/root/search_docs`.
 pub type AgentPath = String;
-/// Deprecated schema-compatible runtime submission/activation UUID.
-#[deprecated(
-    note = "schema-compatible name retained for existing trace bundles; use runtime activation terminology in new APIs"
-)]
-pub type CodexTurnId = String;
+/// Runtime submission/activation UUID.
+pub type RuntimeActivationId = String;
 /// Reduced transcript item ID assigned by the trace reducer.
 pub type ConversationItemId = String;
 /// Local ID for one outbound upstream inference request.
@@ -74,7 +71,7 @@ pub struct RolloutTrace {
     pub status: RolloutStatus,
     pub root_thread_id: AgentThreadId,
     pub threads: BTreeMap<AgentThreadId, AgentThread>,
-    pub codex_turns: BTreeMap<CodexTurnId, CodexTurn>,
+    pub runtime_activations: BTreeMap<RuntimeActivationId, RuntimeActivation>,
     pub conversation_items: BTreeMap<ConversationItemId, ConversationItem>,
     pub inference_calls: BTreeMap<InferenceCallId, InferenceCall>,
     /// Model-authored `exec` JavaScript cells keyed by reducer-owned cell ID.
@@ -112,7 +109,7 @@ impl RolloutTrace {
             status: RolloutStatus::Running,
             root_thread_id,
             threads: BTreeMap::new(),
-            codex_turns: BTreeMap::new(),
+            runtime_activations: BTreeMap::new(),
             conversation_items: BTreeMap::new(),
             inference_calls: BTreeMap::new(),
             code_cells: BTreeMap::new(),

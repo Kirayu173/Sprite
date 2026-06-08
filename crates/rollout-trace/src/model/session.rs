@@ -7,9 +7,9 @@ use crate::raw_event::RawEventSeq;
 
 use super::AgentPath;
 use super::AgentThreadId;
-use super::CodexTurnId;
 use super::ConversationItemId;
 use super::EdgeId;
+use super::RuntimeActivationId;
 
 /// Coarse terminal status for the rollout.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -99,16 +99,11 @@ pub enum ExecutionStatus {
 
 /// One activation of the Sprite runtime for one thread.
 ///
-/// The `CodexTurn` name is retained only for trace bundle schema
-/// compatibility. It groups protocol/runtime work for one thread activation.
-/// It is not a user/assistant message pair; conversation belongs in
-/// `ConversationItem`.
-#[deprecated(
-    note = "schema-compatible name retained for existing trace bundles; use runtime activation terminology in new APIs"
-)]
+/// It groups protocol/runtime work for one thread activation. It is not a
+/// user/assistant message pair; conversation belongs in `ConversationItem`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CodexTurn {
-    pub codex_turn_id: CodexTurnId,
+pub struct RuntimeActivation {
+    pub runtime_activation_id: RuntimeActivationId,
     pub thread_id: AgentThreadId,
     pub execution: ExecutionWindow,
     /// Conversation items that directly triggered this activation, when known.

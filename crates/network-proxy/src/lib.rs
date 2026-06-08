@@ -146,3 +146,33 @@ impl NetworkConfig {
 pub fn normalize_host(host: &str) -> String {
     host.trim().to_ascii_lowercase()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn upsert_domain_permission_normalizes_and_replaces_existing_entry() {
+        let mut config = NetworkConfig::default();
+
+        config.upsert_domain_permission(
+            " EXAMPLE.COM ".to_string(),
+            NetworkDomainPermission::Allow,
+            normalize_host,
+        );
+        config.upsert_domain_permission(
+            "example.com".to_string(),
+            NetworkDomainPermission::Deny,
+            normalize_host,
+        );
+
+        let domains = config.domains.expect("domains");
+        assert_eq!(
+            domains.entries,
+            vec![NetworkDomainPermissionEntry {
+                pattern: "example.com".to_string(),
+                permission: NetworkDomainPermission::Deny,
+            }]
+        );
+    }
+}

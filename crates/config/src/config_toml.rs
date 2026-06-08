@@ -12,6 +12,7 @@ use crate::types::History;
 use crate::types::McpServerConfig;
 use crate::types::MemoriesToml;
 use crate::types::OAuthCredentialsStoreMode;
+use crate::types::PluginConfig;
 use crate::types::SandboxWorkspaceWrite;
 use crate::types::ShellEnvironmentPolicyToml;
 use crate::types::SkillsConfig;
@@ -282,13 +283,8 @@ pub struct ConfigToml {
     /// `default`, `priority`, or `flex`; legacy `fast` also works).
     pub service_tier: Option<String>,
 
-    /// Base URL override for the built-in `openai` model provider.
+    /// Base URL for the built-in `openai`-compatible model provider.
     pub openai_base_url: Option<String>,
-
-    /// Removed. Former remote thread-store endpoint setting kept only so we can
-    /// fail fast instead of silently falling back to local persistence.
-    #[schemars(skip)]
-    pub experimental_thread_store_endpoint: Option<String>,
 
     /// Experimental / do not use. Selects the thread store implementation.
     pub experimental_thread_store: Option<ThreadStoreToml>,
@@ -311,6 +307,10 @@ pub struct ConfigToml {
 
     /// Lifecycle hooks configured inline in TOML plus user-level overrides.
     pub hooks: Option<HooksToml>,
+
+    /// User-level plugin config entries keyed by plugin id.
+    #[serde(default)]
+    pub plugins: HashMap<String, PluginConfig>,
 
     /// Centralized feature flags (new). Prefer this over individual toggles.
     #[serde(default)]

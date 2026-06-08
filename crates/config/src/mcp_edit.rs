@@ -4,12 +4,15 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 
+use runtime_protocol::config_types::TrustLevel;
 use tokio::task;
 use toml::Value as TomlValue;
 use toml_edit::DocumentMut;
 use toml_edit::Item as TomlItem;
 use toml_edit::Table as TomlTable;
 use toml_edit::value;
+use utils_path::resolve_symlink_write_paths;
+use utils_path::write_atomically;
 
 use crate::AppToolApproval;
 use crate::CONFIG_TOML_FILE;
@@ -59,21 +62,80 @@ fn ensure_no_inline_bearer_tokens(value: &TomlValue) -> std::io::Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Clone)]
+pub enum ConfigEdit {
+    ReplaceMcpServers(BTreeMap<String, McpServerConfig>),
+    SetPath {
+        segments: Vec<String>,
+        value: TomlItem,
+    },
+    ClearPath {
+        segments: Vec<String>,
+    },
+    SetProjectTrustLevel {
+        path: PathBuf,
+        level: TrustLevel,
+    },
+    SetPluginEnabled {
+        plugin_key: String,
+        enabled: bool,
+    },
+    ClearPlugin {
+        plugin_key: String,
+    },
+}
+
 pub struct ConfigEditsBuilder {
-    sprite_home: PathBuf,
-    mcp_servers: Option<BTreeMap<String, McpServerConfig>>,
+    config_path: PathBuf,
+    edits: Vec<ConfigEdit>,
 }
 
 impl ConfigEditsBuilder {
     pub fn new(sprite_home: &Path) -> Self {
+        Self::for_config_path(&sprite_home.join(CONFIG_TOML_FILE))
+    }
+
+    pub fn for_config_path(config_path: &Path) -> Self {
         Self {
-            sprite_home: sprite_home.to_path_buf(),
-            mcp_servers: None,
+            config_path: config_path.to_path_buf(),
+            edits: Vec::new(),
         }
     }
 
     pub fn replace_mcp_servers(mut self, servers: &BTreeMap<String, McpServerConfig>) -> Self {
-        self.mcp_servers = Some(servers.clone());
+        self.edits
+            .push(ConfigEdit::ReplaceMcpServers(servers.clone()));
+        self
+    }
+
+    pub fn set_path(mut self, segments: Vec<String>, value: TomlItem) -> Self {
+        self.edits.push(ConfigEdit::SetPath { segments, value });
+        self
+    }
+
+    pub fn clear_path(mut self, segments: Vec<String>) -> Self {
+        self.edits.push(ConfigEdit::ClearPath { segments });
+        self
+    }
+
+    pub fn set_project_trust_level<P: Into<PathBuf>>(mut self, path: P, level: TrustLevel) -> Self {
+        self.edits.push(ConfigEdit::SetProjectTrustLevel {
+            path: path.into(),
+            level,
+        });
+        self
+    }
+
+    pub fn set_plugin_enabled(mut self, plugin_key: String, enabled: bool) -> Self {
+        self.edits.push(ConfigEdit::SetPluginEnabled {
+            plugin_key,
+            enabled,
+        });
+        self
+    }
+
+    pub fn clear_plugin(mut self, plugin_key: String) -> Self {
+        self.edits.push(ConfigEdit::ClearPlugin { plugin_key });
         self
     }
 
@@ -85,18 +147,45 @@ impl ConfigEditsBuilder {
             })?
     }
 
-    fn apply_blocking(self) -> std::io::Result<()> {
-        let config_path = self.sprite_home.join(CONFIG_TOML_FILE);
-        let mut doc = read_or_create_document(&config_path)?;
-        if let Some(servers) = self.mcp_servers.as_ref() {
-            replace_mcp_servers(&mut doc, servers);
+    pub fn apply_blocking(self) -> std::io::Result<()> {
+        if self.edits.is_empty() {
+            return Ok(());
         }
-        fs::create_dir_all(&self.sprite_home)?;
-        fs::write(config_path, doc.to_string())
+        let write_paths = resolve_symlink_write_paths(&self.config_path)?;
+        let mut doc = read_or_create_document(write_paths.read_path.as_deref())?;
+        let mut mutated = false;
+        for edit in self.edits {
+            mutated |= apply_edit(&mut doc, edit);
+        }
+        if !mutated {
+            return Ok(());
+        }
+        write_atomically(&write_paths.write_path, &doc.to_string())
     }
 }
 
-fn read_or_create_document(config_path: &Path) -> std::io::Result<DocumentMut> {
+pub async fn set_user_plugin_enabled(
+    sprite_home: &Path,
+    plugin_key: String,
+    enabled: bool,
+) -> std::io::Result<()> {
+    ConfigEditsBuilder::new(sprite_home)
+        .set_plugin_enabled(plugin_key, enabled)
+        .apply()
+        .await
+}
+
+pub async fn clear_user_plugin(sprite_home: &Path, plugin_key: String) -> std::io::Result<()> {
+    ConfigEditsBuilder::new(sprite_home)
+        .clear_plugin(plugin_key)
+        .apply()
+        .await
+}
+
+fn read_or_create_document(config_path: Option<&Path>) -> std::io::Result<DocumentMut> {
+    let Some(config_path) = config_path else {
+        return Ok(DocumentMut::new());
+    };
     match fs::read_to_string(config_path) {
         Ok(raw) => raw
             .parse::<DocumentMut>()
@@ -106,11 +195,26 @@ fn read_or_create_document(config_path: &Path) -> std::io::Result<DocumentMut> {
     }
 }
 
-fn replace_mcp_servers(doc: &mut DocumentMut, servers: &BTreeMap<String, McpServerConfig>) {
+fn apply_edit(doc: &mut DocumentMut, edit: ConfigEdit) -> bool {
+    match edit {
+        ConfigEdit::ReplaceMcpServers(servers) => replace_mcp_servers(doc, &servers),
+        ConfigEdit::SetPath { segments, value } => insert_path(doc, &segments, value),
+        ConfigEdit::ClearPath { segments } => remove_path(doc, &segments),
+        ConfigEdit::SetProjectTrustLevel { path, level } => {
+            set_project_trust_level(doc, &path, level)
+        }
+        ConfigEdit::SetPluginEnabled {
+            plugin_key,
+            enabled,
+        } => set_plugin_enabled(doc, &plugin_key, enabled),
+        ConfigEdit::ClearPlugin { plugin_key } => clear_plugin(doc, &plugin_key),
+    }
+}
+
+fn replace_mcp_servers(doc: &mut DocumentMut, servers: &BTreeMap<String, McpServerConfig>) -> bool {
     let root = doc.as_table_mut();
     if servers.is_empty() {
-        root.remove("mcp_servers");
-        return;
+        return root.remove("mcp_servers").is_some();
     }
 
     let mut table = TomlTable::new();
@@ -119,6 +223,7 @@ fn replace_mcp_servers(doc: &mut DocumentMut, servers: &BTreeMap<String, McpServ
         table.insert(name, serialize_mcp_server(config));
     }
     root.insert("mcp_servers", TomlItem::Table(table));
+    true
 }
 
 fn serialize_mcp_server(config: &McpServerConfig) -> TomlItem {
@@ -287,6 +392,136 @@ where
         table.insert(key, value(value_str.clone()));
     }
     TomlItem::Table(table)
+}
+
+fn insert_path(doc: &mut DocumentMut, segments: &[String], value: TomlItem) -> bool {
+    let Some((last, parents)) = segments.split_last() else {
+        return false;
+    };
+    let Some(parent) = descend(doc, parents, TraversalMode::Create) else {
+        return false;
+    };
+    parent[last] = value;
+    true
+}
+
+fn remove_path(doc: &mut DocumentMut, segments: &[String]) -> bool {
+    let Some((last, parents)) = segments.split_last() else {
+        return false;
+    };
+    let Some(parent) = descend(doc, parents, TraversalMode::Existing) else {
+        return false;
+    };
+    parent.remove(last).is_some()
+}
+
+fn set_project_trust_level(doc: &mut DocumentMut, path: &Path, level: TrustLevel) -> bool {
+    let segments = vec![
+        "projects".to_string(),
+        path.to_string_lossy().to_string(),
+        "trust_level".to_string(),
+    ];
+    insert_path(doc, &segments, value(level.to_string()))
+}
+
+fn set_plugin_enabled(doc: &mut DocumentMut, plugin_key: &str, enabled: bool) -> bool {
+    let segments = vec![
+        "plugins".to_string(),
+        plugin_key.to_string(),
+        "enabled".to_string(),
+    ];
+    insert_path(doc, &segments, value(enabled))
+}
+
+fn clear_plugin(doc: &mut DocumentMut, plugin_key: &str) -> bool {
+    let segments = vec!["plugins".to_string(), plugin_key.to_string()];
+    let removed = remove_path(doc, &segments);
+    if doc
+        .get("plugins")
+        .and_then(TomlItem::as_table_like)
+        .is_some_and(|plugins| plugins.is_empty())
+    {
+        doc.as_table_mut().remove("plugins");
+    }
+    removed
+}
+
+#[derive(Clone, Copy)]
+enum TraversalMode {
+    Create,
+    Existing,
+}
+
+fn descend<'a>(
+    doc: &'a mut DocumentMut,
+    segments: &[String],
+    mode: TraversalMode,
+) -> Option<&'a mut TomlTable> {
+    let mut current = doc.as_table_mut();
+
+    for segment in segments {
+        match mode {
+            TraversalMode::Create => {
+                if !current.contains_key(segment.as_str()) {
+                    current.insert(segment.as_str(), TomlItem::Table(new_implicit_table()));
+                }
+                let item = current.get_mut(segment.as_str())?;
+                current = ensure_table_for_write(item)?;
+            }
+            TraversalMode::Existing => {
+                let item = current.get_mut(segment.as_str())?;
+                current = ensure_table_for_read(item)?;
+            }
+        }
+    }
+
+    Some(current)
+}
+
+fn ensure_table_for_write(item: &mut TomlItem) -> Option<&mut TomlTable> {
+    match item {
+        TomlItem::Table(table) => Some(table),
+        TomlItem::Value(value) => {
+            let table = value
+                .as_inline_table()
+                .map_or_else(new_implicit_table, table_from_inline);
+            *item = TomlItem::Table(table);
+            item.as_table_mut()
+        }
+        TomlItem::None => {
+            *item = TomlItem::Table(new_implicit_table());
+            item.as_table_mut()
+        }
+        _ => None,
+    }
+}
+
+fn ensure_table_for_read(item: &mut TomlItem) -> Option<&mut TomlTable> {
+    match item {
+        TomlItem::Table(_) => {}
+        TomlItem::Value(value) => {
+            let inline = value.as_inline_table()?.clone();
+            *item = TomlItem::Table(table_from_inline(&inline));
+        }
+        _ => return None,
+    }
+    item.as_table_mut()
+}
+
+fn table_from_inline(inline: &toml_edit::InlineTable) -> TomlTable {
+    let mut table = new_implicit_table();
+    for (key, value) in inline.iter() {
+        let mut value = value.clone();
+        value.decor_mut().set_suffix("");
+        table.insert(key, TomlItem::Value(value));
+    }
+    table
+}
+
+fn new_implicit_table() -> TomlTable {
+    let mut table = TomlTable::new();
+    table.set_implicit(true);
+    table
 }
 
 #[cfg(test)]

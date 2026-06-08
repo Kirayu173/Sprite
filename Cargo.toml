@@ -18,11 +18,11 @@ members = [
     "crates/utils/sandbox-summary",
     "crates/async-utils",
     "crates/experimental-api-macros",
-    "crates/stubs/execpolicy",
-    "crates/stubs/features",
-    "crates/stubs/file-system",
-    "crates/stubs/git-utils",
-    "crates/stubs/network-proxy",
+    "crates/execpolicy",
+    "crates/features",
+    "crates/file-system",
+    "crates/git-utils",
+    "crates/network-proxy",
 ]
 resolver = "2"
 
@@ -36,12 +36,12 @@ app-protocol = { path = "crates/app-protocol" }
 async-utils = { path = "crates/async-utils" }
 config = { path = "crates/config" }
 diagnostics = { path = "crates/diagnostics" }
-execpolicy = { path = "crates/stubs/execpolicy" }
-features = { path = "crates/stubs/features" }
-file-system = { path = "crates/stubs/file-system" }
-git-utils = { path = "crates/stubs/git-utils" }
+execpolicy = { path = "crates/execpolicy" }
+features = { path = "crates/features" }
+file-system = { path = "crates/file-system" }
+git-utils = { path = "crates/git-utils" }
 model-provider-info = { path = "crates/model-provider-info" }
-network-proxy = { path = "crates/stubs/network-proxy" }
+network-proxy = { path = "crates/network-proxy" }
 experimental-api-macros = { path = "crates/experimental-api-macros" }
 runtime-core = { path = "crates/runtime-core" }
 runtime-protocol = { path = "crates/runtime-protocol" }

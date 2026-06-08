@@ -475,6 +475,61 @@ pub use crate::skills_config::BundledSkillsConfig;
 pub use crate::skills_config::SkillConfig;
 pub use crate::skills_config::SkillsConfig;
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct PluginConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+
+    /// Per-MCP-server policy overlays for MCP servers contributed by this plugin.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub mcp_servers: HashMap<String, PluginMcpServerConfig>,
+}
+
+impl Default for PluginConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            mcp_servers: HashMap::new(),
+        }
+    }
+}
+
+/// Policy settings for a plugin-provided MCP server.
+///
+/// Transport settings stay in plugin manifests. User config owns enablement and
+/// tool policy.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct PluginMcpServerConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_tools_approval_mode: Option<AppToolApproval>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled_tools: Option<Vec<String>>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disabled_tools: Option<Vec<String>>,
+
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub tools: HashMap<String, McpServerToolConfig>,
+}
+
+impl Default for PluginMcpServerConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            default_tools_approval_mode: None,
+            enabled_tools: None,
+            disabled_tools: None,
+            tools: HashMap::new(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct SandboxWorkspaceWrite {

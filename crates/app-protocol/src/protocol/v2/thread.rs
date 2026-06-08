@@ -138,7 +138,7 @@ pub struct ThreadStartParams {
     pub ephemeral: Option<bool>,
     #[ts(optional = nullable)]
     pub session_start_source: Option<ThreadStartSource>,
-    /// Optional client-supplied analytics source classification for this thread.
+    /// Optional client-supplied source classification for this thread.
     #[ts(optional = nullable)]
     pub thread_source: Option<ThreadSource>,
     /// Optional sticky environments for this thread.
@@ -533,7 +533,7 @@ pub struct ThreadForkParams {
     pub developer_instructions: Option<String>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ephemeral: bool,
-    /// Optional client-supplied analytics source classification for this forked thread.
+    /// Optional client-supplied source classification for this forked thread.
     #[ts(optional = nullable)]
     pub thread_source: Option<ThreadSource>,
     /// When true, return only thread metadata and live fork state without
@@ -1258,7 +1258,8 @@ pub struct ThreadTokenUsageUpdatedNotification {
 pub struct ThreadTokenUsage {
     pub total: TokenUsageBreakdown,
     pub last: TokenUsageBreakdown,
-    // TODO(aibrahim): make this not optional
+    // Some providers do not report a context window. Keep this nullable until
+    // every runtime path resolves one before token usage notifications.
     #[ts(type = "number | null")]
     pub model_context_window: Option<i64>,
 }

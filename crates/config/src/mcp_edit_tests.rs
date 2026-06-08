@@ -2,9 +2,11 @@ use super::*;
 use crate::McpServerOAuthConfig;
 use crate::McpServerToolConfig;
 use pretty_assertions::assert_eq;
+use runtime_protocol::config_types::TrustLevel;
 use std::collections::HashMap;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+use toml_edit::value;
 
 #[tokio::test]
 async fn replace_mcp_servers_serializes_per_tool_approval_overrides() -> anyhow::Result<()> {
@@ -82,6 +84,98 @@ approval_mode = "approve"
 
     std::fs::remove_dir_all(&sprite_home)?;
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn general_edits_write_and_clear_dotted_paths() -> anyhow::Result<()> {
+    let unique_suffix = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
+    let sprite_home = std::env::temp_dir().join(format!(
+        "sprite-config-general-edit-test-{}-{unique_suffix}",
+        std::process::id()
+    ));
+
+    ConfigEditsBuilder::new(&sprite_home)
+        .set_path(
+            vec!["tui".to_string(), "theme".to_string()],
+            value("solarized-dark"),
+        )
+        .set_path(vec!["model".to_string()], value("gpt-5"))
+        .clear_path(vec!["model".to_string()])
+        .apply()
+        .await?;
+
+    let serialized = std::fs::read_to_string(sprite_home.join(CONFIG_TOML_FILE))?;
+    assert_eq!(
+        serialized,
+        r#"[tui]
+theme = "solarized-dark"
+"#
+    );
+
+    std::fs::remove_dir_all(&sprite_home)?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn project_trust_edit_writes_project_table() -> anyhow::Result<()> {
+    let unique_suffix = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
+    let sprite_home = std::env::temp_dir().join(format!(
+        "sprite-config-project-trust-edit-test-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let project_path = if cfg!(windows) {
+        std::path::PathBuf::from(r"C:\work\repo")
+    } else {
+        std::path::PathBuf::from("/work/repo")
+    };
+
+    ConfigEditsBuilder::new(&sprite_home)
+        .set_project_trust_level(project_path.clone(), TrustLevel::Trusted)
+        .apply()
+        .await?;
+
+    let serialized = std::fs::read_to_string(sprite_home.join(CONFIG_TOML_FILE))?;
+    assert!(serialized.contains("[projects."));
+    assert!(serialized.contains("trust_level = \"trusted\""));
+
+    std::fs::remove_dir_all(&sprite_home)?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn plugin_edit_writes_compiled_plugin_config() -> anyhow::Result<()> {
+    let unique_suffix = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
+    let sprite_home = std::env::temp_dir().join(format!(
+        "sprite-config-plugin-edit-test-{}-{unique_suffix}",
+        std::process::id()
+    ));
+
+    set_user_plugin_enabled(&sprite_home, "demo@local".to_string(), false).await?;
+
+    let serialized = std::fs::read_to_string(sprite_home.join(CONFIG_TOML_FILE))?;
+    assert_eq!(
+        serialized,
+        r#"[plugins."demo@local"]
+enabled = false
+"#
+    );
+    let parsed: crate::config_toml::ConfigToml = toml::from_str(&serialized)?;
+    assert_eq!(
+        parsed
+            .plugins
+            .get("demo@local")
+            .map(|plugin| plugin.enabled),
+        Some(false)
+    );
+
+    clear_user_plugin(&sprite_home, "demo@local".to_string()).await?;
+    assert_eq!(
+        std::fs::read_to_string(sprite_home.join(CONFIG_TOML_FILE))?,
+        ""
+    );
+
+    std::fs::remove_dir_all(&sprite_home)?;
     Ok(())
 }
 

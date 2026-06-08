@@ -8,5 +8,9 @@ license.workspace = true
 async-trait = { workspace = true }
 utils-absolute-path = { workspace = true }
 
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt"] }
+
 [lib]
 doctest = false

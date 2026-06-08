@@ -16,11 +16,11 @@ use super::TraceReducer;
 use super::tool::spawn_edge_id;
 use crate::model::AgentOrigin;
 use crate::model::AgentThread;
-use crate::model::CodexTurn;
-use crate::model::CodexTurnId;
 use crate::model::ExecutionStatus;
 use crate::model::ExecutionWindow;
 use crate::model::RolloutStatus;
+use crate::model::RuntimeActivation;
+use crate::model::RuntimeActivationId;
 use crate::payload::RawPayloadRef;
 use crate::raw_event::RawEventSeq;
 
@@ -126,23 +126,27 @@ impl TraceReducer {
     }
 
     /// Starts a runtime activation inside an existing thread.
-    pub(super) fn start_codex_turn(
+    pub(super) fn start_runtime_activation(
         &mut self,
         seq: RawEventSeq,
         wall_time_unix_ms: i64,
-        codex_turn_id: CodexTurnId,
+        runtime_activation_id: RuntimeActivationId,
         thread_id: String,
     ) -> Result<()> {
-        if self.rollout.codex_turns.contains_key(&codex_turn_id) {
-            bail!("duplicate codex turn start for {codex_turn_id}");
+        if self
+            .rollout
+            .runtime_activations
+            .contains_key(&runtime_activation_id)
+        {
+            bail!("duplicate runtime activation start for {runtime_activation_id}");
         }
 
         self.thread_mut(&thread_id)?;
 
-        self.rollout.codex_turns.insert(
-            codex_turn_id.clone(),
-            CodexTurn {
-                codex_turn_id,
+        self.rollout.runtime_activations.insert(
+            runtime_activation_id.clone(),
+            RuntimeActivation {
+                runtime_activation_id,
                 thread_id,
                 execution: ExecutionWindow {
                     started_at_unix_ms: wall_time_unix_ms,
@@ -158,27 +162,31 @@ impl TraceReducer {
     }
 
     /// Marks a runtime activation terminal and validates any thread id carried by the raw event.
-    pub(super) fn end_codex_turn(
+    pub(super) fn end_runtime_activation(
         &mut self,
         seq: RawEventSeq,
         wall_time_unix_ms: i64,
         thread_id: Option<String>,
-        codex_turn_id: CodexTurnId,
+        runtime_activation_id: RuntimeActivationId,
         status: ExecutionStatus,
     ) -> Result<()> {
         if let Some(event_thread_id) = thread_id.as_deref()
-            && let Some(turn) = self.rollout.codex_turns.get(&codex_turn_id)
+            && let Some(turn) = self.rollout.runtime_activations.get(&runtime_activation_id)
             && turn.thread_id != event_thread_id
         {
             bail!(
-                "codex turn end for {codex_turn_id} used thread {event_thread_id}, \
-                 but the turn belongs to {}",
+                "runtime activation end for {runtime_activation_id} used thread {event_thread_id}, \
+                 but the activation belongs to {}",
                 turn.thread_id
             );
         }
 
-        let Some(turn) = self.rollout.codex_turns.get_mut(&codex_turn_id) else {
-            bail!("codex turn end referenced unknown turn {codex_turn_id}");
+        let Some(turn) = self
+            .rollout
+            .runtime_activations
+            .get_mut(&runtime_activation_id)
+        else {
+            bail!("runtime activation end referenced unknown activation {runtime_activation_id}");
         };
         turn.execution.ended_at_unix_ms = Some(wall_time_unix_ms);
         turn.execution.ended_seq = Some(seq);
@@ -186,13 +194,13 @@ impl TraceReducer {
         self.terminate_running_code_cells_for_turn_end(
             seq,
             wall_time_unix_ms,
-            &codex_turn_id,
+            &runtime_activation_id,
             &status,
         )?;
         self.close_running_inference_calls_for_turn_end(
             seq,
             wall_time_unix_ms,
-            &codex_turn_id,
+            &runtime_activation_id,
             &status,
         );
         Ok(())
