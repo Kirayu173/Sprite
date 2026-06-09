@@ -26,8 +26,13 @@ pub struct SessionThreadConfig {
 }
 
 /// Config values owned by the authenticated user.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct UserThreadConfig {}
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct UserThreadConfig {
+    pub model: Option<String>,
+    pub model_provider: Option<String>,
+    pub model_providers: HashMap<String, ModelProviderInfo>,
+    pub features: BTreeMap<String, bool>,
+}
 
 /// A typed config payload paired with the authority that produced it.
 #[derive(Clone, Debug, PartialEq)]
@@ -159,10 +164,17 @@ fn thread_config_source_to_layer(
                 )))
             }
         }
-        // UserThreadConfig has no TOML-backed fields yet. When it grows one,
-        // fold it into the existing user layer instead of adding another
-        // ConfigLayerSource variant.
-        ThreadConfigSource::User(_config) => Ok(None),
+        ThreadConfigSource::User(config) => {
+            let config = user_thread_config_to_toml(config)?;
+            if is_empty_table(&config) {
+                Ok(None)
+            } else {
+                Ok(Some(ConfigLayerEntry::new(
+                    ConfigLayerSource::SessionFlags,
+                    config,
+                )))
+            }
+        }
     }
 }
 
@@ -188,6 +200,45 @@ fn session_thread_config_to_toml(
                 ThreadConfigLoadErrorCode::Parse,
                 /*status_code*/ None,
                 format!("failed to convert session model providers to config TOML: {err}"),
+            )
+        })?;
+        table.insert("model_providers".to_string(), model_providers);
+    }
+
+    if !config.features.is_empty() {
+        let features = config
+            .features
+            .into_iter()
+            .map(|(feature, enabled)| (feature, TomlValue::Boolean(enabled)))
+            .collect();
+        table.insert("features".to_string(), TomlValue::Table(features));
+    }
+
+    Ok(TomlValue::Table(table))
+}
+
+fn user_thread_config_to_toml(
+    config: UserThreadConfig,
+) -> Result<TomlValue, ThreadConfigLoadError> {
+    let mut table = toml::map::Map::new();
+
+    if let Some(model) = config.model {
+        table.insert("model".to_string(), TomlValue::String(model));
+    }
+
+    if let Some(model_provider) = config.model_provider {
+        table.insert(
+            "model_provider".to_string(),
+            TomlValue::String(model_provider),
+        );
+    }
+
+    if !config.model_providers.is_empty() {
+        let model_providers = TomlValue::try_from(config.model_providers).map_err(|err| {
+            ThreadConfigLoadError::new(
+                ThreadConfigLoadErrorCode::Parse,
+                /*status_code*/ None,
+                format!("failed to convert user model providers to config TOML: {err}"),
             )
         })?;
         table.insert("model_providers".to_string(), model_providers);
@@ -248,7 +299,10 @@ mod tests {
     #[tokio::test]
     async fn loader_translates_sources_to_config_layers() {
         let loader = StaticThreadConfigLoader::new(vec![
-            ThreadConfigSource::User(UserThreadConfig::default()),
+            ThreadConfigSource::User(UserThreadConfig {
+                model: Some("gpt-user".to_string()),
+                ..Default::default()
+            }),
             ThreadConfigSource::Session(SessionThreadConfig {
                 model_provider: Some("local".to_string()),
                 model_providers: HashMap::from([("local".to_string(), test_provider("local"))]),
@@ -270,22 +324,31 @@ mod tests {
 
         assert_eq!(
             layers,
-            vec![ConfigLayerEntry::new(
-                ConfigLayerSource::SessionFlags,
-                toml::toml! {
-                    model_provider = "local"
+            vec![
+                ConfigLayerEntry::new(
+                    ConfigLayerSource::SessionFlags,
+                    toml::toml! {
+                        model = "gpt-user"
+                    }
+                    .into()
+                ),
+                ConfigLayerEntry::new(
+                    ConfigLayerSource::SessionFlags,
+                    toml::toml! {
+                        model_provider = "local"
 
-                    [model_providers.local]
-                    name = "local"
-                    base_url = "http://127.0.0.1:8061/api/sprite"
-                    wire_api = "responses"
-                    supports_websockets = true
+                        [model_providers.local]
+                        name = "local"
+                        base_url = "http://127.0.0.1:8061/api/sprite"
+                        wire_api = "responses"
+                        supports_websockets = true
 
-                    [features]
-                    plugins = false
-                }
-                .into()
-            )]
+                        [features]
+                        plugins = false
+                    }
+                    .into()
+                )
+            ]
         );
     }
 

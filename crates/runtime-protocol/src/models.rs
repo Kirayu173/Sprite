@@ -785,7 +785,7 @@ pub enum ResponseItem {
         #[serde(default, skip_serializing)]
         #[ts(skip)]
         id: Option<String>,
-        /// Set when using the Responses API.
+        /// Provider call id when available.
         call_id: Option<String>,
         status: LocalShellStatus,
         action: LocalShellAction,
@@ -798,8 +798,8 @@ pub enum ResponseItem {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[ts(optional)]
         namespace: Option<String>,
-        // The Responses API returns the function call arguments as a *string* that contains
-        // JSON, not as an already‑parsed object. We keep it as a raw string here and let
+        // Some provider wire formats return function call arguments as a *string*
+        // containing JSON, not as an already-parsed object. We keep it as a raw string here and let
         // Session::handle_function_call parse it into a Value.
         arguments: String,
         call_id: String,
@@ -858,7 +858,7 @@ pub enum ResponseItem {
         #[ts(type = "unknown[]")]
         tools: Vec<serde_json::Value>,
     },
-    // Emitted by the Responses API when the agent triggers a web search.
+    // Emitted by provider wire formats when the agent triggers a web search.
     // Example payload (from SSE `response.output_item.done`):
     // {
     //   "id":"ws_...",
@@ -877,7 +877,7 @@ pub enum ResponseItem {
         #[ts(optional)]
         action: Option<WebSearchAction>,
     },
-    // Emitted by the Responses API when the agent triggers image generation.
+    // Emitted by provider wire formats when the agent triggers image generation.
     // Example payload:
     // {
     //   "id":"ig_123",
@@ -917,7 +917,7 @@ impl ResponseItem {
 
 pub const BASE_INSTRUCTIONS_DEFAULT: &str = include_str!("prompts/base_instructions/default.md");
 
-/// Base instructions for the model in a thread. Corresponds to the `instructions` field in the ResponsesAPI.
+/// Base instructions for the model in a thread.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema, TS)]
 #[serde(rename = "base_instructions", rename_all = "snake_case")]
 pub struct BaseInstructions {
@@ -1192,7 +1192,7 @@ pub struct LocalShellExecAction {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema, TS)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(rename = "ResponsesApiWebSearchAction")]
+#[schemars(rename = "ProviderWebSearchAction")]
 pub enum WebSearchAction {
     Search {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1306,7 +1306,7 @@ pub struct ShellCommandToolCallParams {
     pub justification: Option<String>,
 }
 
-/// Responses API compatible content items that can be returned by a tool call.
+/// Provider-compatible content items that can be returned by a tool call.
 /// This is a subset of ContentItem with the types we support as function call outputs.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema, TS)]
 #[serde(tag = "type", rename_all = "snake_case")]

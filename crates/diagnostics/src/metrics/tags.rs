@@ -4,7 +4,6 @@ use crate::metrics::validation::validate_tag_value;
 use utils_string::sanitize_metric_tag_value;
 
 pub const APP_VERSION_TAG: &str = "app.version";
-pub const AUTH_MODE_TAG: &str = "auth_mode";
 pub const MODEL_TAG: &str = "model";
 pub const ORIGINATOR_TAG: &str = "originator";
 pub const SERVICE_NAME_TAG: &str = "service_name";
@@ -36,7 +35,6 @@ pub fn bounded_originator_tag_value(originator: &str) -> &'static str {
 }
 
 pub struct SessionMetricTagValues<'a> {
-    pub auth_mode: Option<&'a str>,
     pub session_source: &'a str,
     pub originator: &'a str,
     pub service_name: Option<&'a str>,
@@ -46,8 +44,7 @@ pub struct SessionMetricTagValues<'a> {
 
 impl<'a> SessionMetricTagValues<'a> {
     pub fn into_tags(self) -> Result<Vec<(&'static str, &'a str)>> {
-        let mut tags = Vec::with_capacity(6);
-        Self::push_optional_tag(&mut tags, AUTH_MODE_TAG, self.auth_mode)?;
+        let mut tags = Vec::with_capacity(5);
         Self::push_optional_tag(&mut tags, SESSION_SOURCE_TAG, Some(self.session_source))?;
         Self::push_optional_tag(&mut tags, ORIGINATOR_TAG, Some(self.originator))?;
         Self::push_optional_tag(&mut tags, SERVICE_NAME_TAG, self.service_name)?;
@@ -74,7 +71,6 @@ impl<'a> SessionMetricTagValues<'a> {
 #[cfg(test)]
 mod tests {
     use super::APP_VERSION_TAG;
-    use super::AUTH_MODE_TAG;
     use super::MODEL_TAG;
     use super::ORIGINATOR_TAG;
     use super::SERVICE_NAME_TAG;
@@ -85,7 +81,6 @@ mod tests {
     #[test]
     fn session_metric_tags_include_expected_tags_in_order() {
         let tags = SessionMetricTagValues {
-            auth_mode: Some("api_key"),
             session_source: "cli",
             originator: "sprite_cli",
             service_name: Some("desktop_app"),
@@ -98,7 +93,6 @@ mod tests {
         assert_eq!(
             tags,
             vec![
-                (AUTH_MODE_TAG, "api_key"),
                 (SESSION_SOURCE_TAG, "cli"),
                 (ORIGINATOR_TAG, "sprite_cli"),
                 (SERVICE_NAME_TAG, "desktop_app"),
@@ -111,7 +105,6 @@ mod tests {
     #[test]
     fn session_metric_tags_skip_missing_optional_tags() {
         let tags = SessionMetricTagValues {
-            auth_mode: None,
             session_source: "exec",
             originator: "sprite_exec",
             service_name: None,

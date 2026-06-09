@@ -4,6 +4,7 @@ pub mod doctor;
 mod local;
 pub(crate) mod metrics;
 pub(crate) mod provider;
+mod runtime;
 mod sink;
 pub(crate) mod trace_context;
 
@@ -27,6 +28,9 @@ pub use crate::metrics::runtime_metrics::RuntimeMetricsSummary;
 pub use crate::metrics::timer::Timer;
 pub use crate::metrics::*;
 pub use crate::provider::OtelProvider;
+pub use crate::runtime::RuntimeDiagnosticsConfig;
+pub use crate::runtime::RuntimeDiagnosticsGuard;
+pub use crate::runtime::install_runtime_diagnostics;
 pub use crate::sink::DiagnosticsEvent;
 pub use crate::sink::DiagnosticsLevel;
 pub use crate::sink::DiagnosticsSink;

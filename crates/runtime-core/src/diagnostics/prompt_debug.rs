@@ -7,6 +7,8 @@ use runtime_protocol::dynamic_tools::DynamicToolSpec;
 use runtime_protocol::models::BaseInstructions;
 use runtime_protocol::models::ResponseInputItem;
 use runtime_protocol::models::ResponseItem;
+use runtime_protocol::protocol::InitialHistory;
+use runtime_protocol::protocol::RolloutItem;
 use runtime_protocol::user_input::UserInput;
 use serde::Serialize;
 
@@ -59,6 +61,38 @@ pub fn build_prompt_debug_dump(input: PromptDebugInput) -> PromptDebugDump {
     }
 }
 
+pub fn build_prompt_debug_dump_from_history(
+    initial_history: &InitialHistory,
+    user_input: Vec<UserInput>,
+) -> PromptDebugDump {
+    build_prompt_debug_dump(PromptDebugInput {
+        existing_items: model_visible_items_from_history(initial_history),
+        user_input,
+        base_instructions: initial_history.get_base_instructions(),
+        dynamic_tools: initial_history.get_dynamic_tools().unwrap_or_default(),
+    })
+}
+
+fn model_visible_items_from_history(initial_history: &InitialHistory) -> Vec<ResponseItem> {
+    initial_history
+        .get_rollout_items()
+        .into_iter()
+        .flat_map(|item| match item {
+            RolloutItem::ResponseItem(item) => vec![item],
+            RolloutItem::Compacted(compacted) => {
+                if let Some(replacement_history) = compacted.replacement_history {
+                    replacement_history
+                } else {
+                    vec![ResponseItem::from(compacted)]
+                }
+            }
+            RolloutItem::SessionMeta(_)
+            | RolloutItem::TurnContext(_)
+            | RolloutItem::EventMsg(_) => Vec::new(),
+        })
+        .collect()
+}
+
 pub async fn write_prompt_debug_dump(
     path: impl AsRef<Path>,
     dump: &PromptDebugDump,
@@ -69,7 +103,14 @@ pub async fn write_prompt_debug_dump(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runtime_protocol::ThreadId;
     use runtime_protocol::models::ContentItem;
+    use runtime_protocol::protocol::CompactedItem;
+    use runtime_protocol::protocol::InitialHistory;
+    use runtime_protocol::protocol::ResumedHistory;
+    use runtime_protocol::protocol::RolloutItem;
+    use runtime_protocol::protocol::SessionMeta;
+    use runtime_protocol::protocol::SessionMetaLine;
     use serde_json::json;
 
     #[test]
@@ -153,5 +194,83 @@ mod tests {
         let written = tokio::fs::read_to_string(path).await.unwrap();
         assert!(written.contains("debug base"));
         assert!(written.contains("inspect this"));
+    }
+
+    #[test]
+    fn debug_dump_from_history_uses_session_metadata_and_model_visible_items() {
+        let history = InitialHistory::Forked(vec![
+            RolloutItem::SessionMeta(SessionMetaLine {
+                meta: SessionMeta {
+                    id: ThreadId::default(),
+                    base_instructions: Some(BaseInstructions {
+                        text: "session base".to_string(),
+                    }),
+                    dynamic_tools: Some(vec![DynamicToolSpec {
+                        namespace: Some("docs".to_string()),
+                        name: "lookup".to_string(),
+                        description: "Look up docs".to_string(),
+                        input_schema: json!({"type": "object"}),
+                        defer_loading: false,
+                    }]),
+                    ..SessionMeta::default()
+                },
+                git: None,
+            }),
+            RolloutItem::ResponseItem(ResponseItem::Message {
+                id: None,
+                role: "assistant".to_string(),
+                content: vec![ContentItem::OutputText {
+                    text: "previous answer".to_string(),
+                }],
+                phase: None,
+            }),
+        ]);
+
+        let dump = build_prompt_debug_dump_from_history(
+            &history,
+            vec![UserInput::Text {
+                text: "next question".to_string(),
+                text_elements: Vec::new(),
+            }],
+        );
+
+        assert_eq!(dump.base_instructions.text, "session base");
+        assert_eq!(dump.dynamic_tools[0].name, "lookup");
+        assert_eq!(dump.input.len(), 2);
+        assert_eq!(
+            dump.input.last(),
+            Some(&ResponseItem::Message {
+                id: None,
+                role: "user".to_string(),
+                content: vec![ContentItem::InputText {
+                    text: "next question".to_string()
+                }],
+                phase: None,
+            })
+        );
+    }
+
+    #[test]
+    fn debug_dump_from_history_uses_compaction_replacement_history() {
+        let replacement = ResponseItem::Message {
+            id: None,
+            role: "user".to_string(),
+            content: vec![ContentItem::InputText {
+                text: "replacement context".to_string(),
+            }],
+            phase: None,
+        };
+        let history = InitialHistory::Resumed(ResumedHistory {
+            conversation_id: ThreadId::default(),
+            history: vec![RolloutItem::Compacted(CompactedItem {
+                message: "summary should not be used".to_string(),
+                replacement_history: Some(vec![replacement.clone()]),
+            })],
+            rollout_path: None,
+        });
+
+        let dump = build_prompt_debug_dump_from_history(&history, Vec::new());
+
+        assert_eq!(dump.input, vec![replacement]);
     }
 }

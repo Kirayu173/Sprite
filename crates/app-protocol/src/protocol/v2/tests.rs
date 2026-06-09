@@ -2684,14 +2684,14 @@ fn plugin_source_serializes_local_and_git_variants() {
 fn plugin_catalog_entry_serializes_generated_catalog_path_as_null() {
     assert_eq!(
         serde_json::to_value(PluginCatalogEntry {
-            name: "sprite-curated-remote".to_string(),
+            name: "sprite-local-generated".to_string(),
             path: None,
             interface: None,
             plugins: Vec::new(),
         })
         .unwrap(),
         json!({
-            "name": "sprite-curated-remote",
+            "name": "sprite-local-generated",
             "path": null,
             "interface": null,
             "plugins": [],
@@ -2927,6 +2927,15 @@ fn plugin_uninstall_params_serialization_omits_force_remote_sync() {
 }
 
 #[test]
+fn plugin_protocol_schema_has_no_implicit_network_sync_field() {
+    let schema = serde_json::to_string(&schemars::schema_for!(PluginListResponse)).unwrap();
+    let params_schema = serde_json::to_string(&schemars::schema_for!(PluginListParams)).unwrap();
+    let combined = format!("{schema}\n{params_schema}");
+
+    assert!(!combined.contains("forceRemoteSync"));
+}
+
+#[test]
 fn error_info_serializes_http_status_code_in_camel_case() {
     let value = RuntimeErrorInfo::ResponseTooManyFailedAttempts {
         http_status_code: Some(401),
@@ -2943,10 +2952,10 @@ fn error_info_serializes_http_status_code_in_camel_case() {
 }
 
 #[test]
-fn error_info_serializes_cyber_policy_in_camel_case() {
+fn error_info_serializes_provider_policy_in_camel_case() {
     assert_eq!(
-        serde_json::to_value(RuntimeErrorInfo::CyberPolicy).unwrap(),
-        json!("cyberPolicy")
+        serde_json::to_value(RuntimeErrorInfo::ProviderPolicy).unwrap(),
+        json!("providerPolicy")
     );
 }
 
@@ -3159,7 +3168,7 @@ fn turn_start_params_preserve_explicit_null_service_tier() {
         thread_id: "thread_123".to_string(),
         client_user_message_id: None,
         input: vec![],
-        responsesapi_client_metadata: None,
+        provider_client_metadata: None,
         additional_context: None,
         environments: None,
         cwd: None,
@@ -3179,6 +3188,33 @@ fn turn_start_params_preserve_explicit_null_service_tier() {
     let serialized_without_override =
         serde_json::to_value(&without_override).expect("params should serialize");
     assert_eq!(serialized_without_override.get("serviceTier"), None);
+}
+
+#[test]
+fn turn_start_params_accept_legacy_responsesapi_client_metadata() {
+    let params: TurnStartParams = serde_json::from_value(json!({
+        "threadId": "thread_123",
+        "input": [],
+        "responsesapiClientMetadata": {
+            "source": "legacy"
+        }
+    }))
+    .expect("params should deserialize");
+
+    assert_eq!(
+        params.provider_client_metadata,
+        Some(HashMap::from([(
+            "source".to_string(),
+            "legacy".to_string()
+        )]))
+    );
+
+    let serialized = serde_json::to_value(&params).expect("params should serialize");
+    assert_eq!(serialized.get("responsesapiClientMetadata"), None);
+    assert_eq!(
+        serialized.get("providerClientMetadata"),
+        Some(&json!({"source": "legacy"}))
+    );
 }
 
 #[test]

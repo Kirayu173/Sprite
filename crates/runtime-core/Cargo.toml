@@ -7,10 +7,14 @@ license.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+runtime-diagnostics = ["dep:diagnostics", "dep:rollout-trace"]
+
 [dependencies]
 config = { workspace = true }
-diagnostics = { workspace = true }
-rollout-trace = { workspace = true }
+diagnostics = { workspace = true, optional = true }
+rollout-trace = { workspace = true, optional = true }
 runtime-protocol = { workspace = true }
 utils-absolute-path = { workspace = true }
 serde = { workspace = true }
@@ -18,6 +22,7 @@ serde_json = { workspace = true }
 similar = { workspace = true }
 tokio = { workspace = true, features = ["fs", "rt"] }
 toml = { workspace = true }
+tracing = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { workspace = true, features = [

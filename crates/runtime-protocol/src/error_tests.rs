@@ -64,7 +64,7 @@ fn usage_limit_error_formats_default_message() {
 fn usage_limit_error_formats_usage_limit_kinds() {
     let cases = [
         UsageLimitKind::ProviderLimitReached,
-        UsageLimitKind::SubscriptionLimitReached,
+        UsageLimitKind::WorkspaceLimitReached,
         UsageLimitKind::ProjectLimitReached,
         UsageLimitKind::Other,
     ];
@@ -79,6 +79,28 @@ fn usage_limit_error_formats_usage_limit_kinds() {
         assert_eq!(
             err.to_string(),
             "You've hit your usage limit. Try again later."
+        );
+    }
+}
+
+#[test]
+fn usage_limit_kind_serializes_provider_neutral_workspace_kind() {
+    assert_eq!(
+        serde_json::to_value(UsageLimitKind::WorkspaceLimitReached).unwrap(),
+        serde_json::json!("workspace_limit_reached")
+    );
+}
+
+#[test]
+fn usage_limit_kind_accepts_legacy_subscription_and_account_aliases() {
+    for legacy in ["subscription_limit_reached", "account_limit_reached"] {
+        assert_eq!(
+            serde_json::from_value::<UsageLimitKind>(serde_json::json!(legacy)).unwrap(),
+            UsageLimitKind::WorkspaceLimitReached
+        );
+        assert_eq!(
+            legacy.parse::<UsageLimitKind>().unwrap(),
+            UsageLimitKind::WorkspaceLimitReached
         );
     }
 }

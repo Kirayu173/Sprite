@@ -1,0 +1,358 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AbsolutePathBuf": {
+      "description": "A path that is guaranteed to be absolute and normalized (though it is not guaranteed to be canonicalized or exist on the filesystem).\n\nIMPORTANT: When deserializing an `AbsolutePathBuf`, a base path must be set using [AbsolutePathBufGuard::new]. If no base path is set, the deserialization will fail unless the path being deserialized is already absolute.",
+      "type": "string"
+    },
+    "CatalogInterface": {
+      "properties": {
+        "displayName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "CatalogLoadErrorInfo": {
+      "properties": {
+        "catalogPath": {
+          "$ref": "#/definitions/AbsolutePathBuf"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "catalogPath",
+        "message"
+      ],
+      "type": "object"
+    },
+    "PluginAvailability": {
+      "enum": [
+        "AVAILABLE",
+        "DISABLED_BY_ADMIN"
+      ],
+      "type": "string"
+    },
+    "PluginCatalogEntry": {
+      "properties": {
+        "interface": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CatalogInterface"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AbsolutePathBuf"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Local catalog file path when the catalog is backed by a local file. Generated or in-memory catalogs do not have a local path."
+        },
+        "plugins": {
+          "items": {
+            "$ref": "#/definitions/PluginSummary"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "plugins"
+      ],
+      "type": "object"
+    },
+    "PluginInstallPolicy": {
+      "enum": [
+        "NOT_AVAILABLE",
+        "AVAILABLE",
+        "INSTALLED_BY_DEFAULT"
+      ],
+      "type": "string"
+    },
+    "PluginInterface": {
+      "properties": {
+        "brandColor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "category": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "composerIcon": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AbsolutePathBuf"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Local composer icon path, resolved from the installed plugin package."
+        },
+        "defaultPrompt": {
+          "description": "Starter prompts for the plugin. Capped at 3 entries with a maximum of 128 characters per entry.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "developerName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "displayName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "logo": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AbsolutePathBuf"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Local logo path, resolved from the installed plugin package."
+        },
+        "longDescription": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "privacyPolicyUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "screenshots": {
+          "description": "Local screenshot paths, resolved from the installed plugin package.",
+          "items": {
+            "$ref": "#/definitions/AbsolutePathBuf"
+          },
+          "type": "array"
+        },
+        "shortDescription": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "termsOfServiceUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "websiteUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "capabilities",
+        "screenshots"
+      ],
+      "type": "object"
+    },
+    "PluginSetupPolicy": {
+      "enum": [
+        "ON_INSTALL",
+        "ON_USE"
+      ],
+      "type": "string"
+    },
+    "PluginSource": {
+      "oneOf": [
+        {
+          "description": "Plugin materialized from a local filesystem path.",
+          "properties": {
+            "path": {
+              "$ref": "#/definitions/AbsolutePathBuf"
+            },
+            "type": {
+              "enum": [
+                "local"
+              ],
+              "title": "LocalPluginSourceType",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "type"
+          ],
+          "title": "LocalPluginSource",
+          "type": "object"
+        },
+        {
+          "description": "Plugin materialized from an explicit user-configured Git source.",
+          "properties": {
+            "path": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "refName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sha": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "enum": [
+                "git"
+              ],
+              "title": "GitPluginSourceType",
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "url"
+          ],
+          "title": "GitPluginSource",
+          "type": "object"
+        }
+      ]
+    },
+    "PluginSummary": {
+      "properties": {
+        "availability": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/PluginAvailability"
+            }
+          ],
+          "default": "AVAILABLE",
+          "description": "Availability state for installing and using the plugin."
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "installPolicy": {
+          "$ref": "#/definitions/PluginInstallPolicy"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "interface": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PluginInterface"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "keywords": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "localVersion": {
+          "default": null,
+          "description": "Version of the locally materialized plugin package when available.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "setupPolicy": {
+          "$ref": "#/definitions/PluginSetupPolicy"
+        },
+        "source": {
+          "$ref": "#/definitions/PluginSource"
+        }
+      },
+      "required": [
+        "enabled",
+        "id",
+        "installPolicy",
+        "installed",
+        "name",
+        "setupPolicy",
+        "source"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "Installed Sprite-owned plugin catalog data discovered from local files or generated in-memory by Sprite.",
+  "properties": {
+    "catalogLoadErrors": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/CatalogLoadErrorInfo"
+      },
+      "type": "array"
+    },
+    "catalogs": {
+      "items": {
+        "$ref": "#/definitions/PluginCatalogEntry"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "catalogs"
+  ],
+  "title": "PluginInstalledResponse",
+  "type": "object"
+}

@@ -59,7 +59,7 @@ pub enum NonSteerableTurnKind {
 
 /// This translation layer makes sure that we expose runtime error codes in camel case.
 ///
-/// When an upstream HTTP status is available (for example, from the Responses API or a provider),
+/// When an upstream HTTP status is available from a provider,
 /// it is forwarded in `httpStatusCode` on the relevant `RuntimeErrorInfo` variant.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
@@ -68,7 +68,7 @@ pub enum RuntimeErrorInfo {
     ContextWindowExceeded,
     UsageLimitExceeded,
     ServerOverloaded,
-    CyberPolicy,
+    ProviderPolicy,
     HttpConnectionFailed {
         #[serde(rename = "httpStatusCode")]
         #[ts(rename = "httpStatusCode")]
@@ -113,7 +113,7 @@ impl From<CoreRuntimeErrorInfo> for RuntimeErrorInfo {
             CoreRuntimeErrorInfo::ContextWindowExceeded => RuntimeErrorInfo::ContextWindowExceeded,
             CoreRuntimeErrorInfo::UsageLimitExceeded => RuntimeErrorInfo::UsageLimitExceeded,
             CoreRuntimeErrorInfo::ServerOverloaded => RuntimeErrorInfo::ServerOverloaded,
-            CoreRuntimeErrorInfo::CyberPolicy => RuntimeErrorInfo::CyberPolicy,
+            CoreRuntimeErrorInfo::ProviderPolicy => RuntimeErrorInfo::ProviderPolicy,
             CoreRuntimeErrorInfo::HttpConnectionFailed { http_status_code } => {
                 RuntimeErrorInfo::HttpConnectionFailed { http_status_code }
             }

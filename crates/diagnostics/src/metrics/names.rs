@@ -10,18 +10,13 @@ pub const WEBSOCKET_REQUEST_COUNT_METRIC: &str = "sprite.websocket.request";
 pub const WEBSOCKET_REQUEST_DURATION_METRIC: &str = "sprite.websocket.request.duration_ms";
 pub const WEBSOCKET_EVENT_COUNT_METRIC: &str = "sprite.websocket.event";
 pub const WEBSOCKET_EVENT_DURATION_METRIC: &str = "sprite.websocket.event.duration_ms";
-pub const RESPONSES_API_OVERHEAD_DURATION_METRIC: &str =
-    "sprite.responses_api_overhead.duration_ms";
-pub const RESPONSES_API_INFERENCE_TIME_DURATION_METRIC: &str =
-    "sprite.responses_api_inference_time.duration_ms";
-pub const RESPONSES_API_ENGINE_IAPI_TTFT_DURATION_METRIC: &str =
-    "sprite.responses_api_engine_iapi_ttft.duration_ms";
-pub const RESPONSES_API_ENGINE_SERVICE_TTFT_DURATION_METRIC: &str =
-    "sprite.responses_api_engine_service_ttft.duration_ms";
-pub const RESPONSES_API_ENGINE_IAPI_TBT_DURATION_METRIC: &str =
-    "sprite.responses_api_engine_iapi_tbt.duration_ms";
-pub const RESPONSES_API_ENGINE_SERVICE_TBT_DURATION_METRIC: &str =
-    "sprite.responses_api_engine_service_tbt.duration_ms";
+pub const PROVIDER_OVERHEAD_DURATION_METRIC: &str = "sprite.provider.overhead.duration_ms";
+pub const PROVIDER_INFERENCE_TIME_DURATION_METRIC: &str =
+    "sprite.provider.inference_time.duration_ms";
+pub const PROVIDER_BACKEND_TTFT_DURATION_METRIC: &str = "sprite.provider.backend_ttft.duration_ms";
+pub const PROVIDER_SERVICE_TTFT_DURATION_METRIC: &str = "sprite.provider.service_ttft.duration_ms";
+pub const PROVIDER_BACKEND_TBT_DURATION_METRIC: &str = "sprite.provider.backend_tbt.duration_ms";
+pub const PROVIDER_SERVICE_TBT_DURATION_METRIC: &str = "sprite.provider.service_tbt.duration_ms";
 pub const TURN_E2E_DURATION_METRIC: &str = "sprite.turn.e2e_duration_ms";
 pub const TURN_TTFT_DURATION_METRIC: &str = "sprite.turn.ttft.duration_ms";
 pub const TURN_TTFM_DURATION_METRIC: &str = "sprite.turn.ttfm.duration_ms";

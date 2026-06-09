@@ -2,23 +2,31 @@
 
 use std::io;
 
+#[cfg(feature = "runtime-diagnostics")]
 use diagnostics::MEMORIES_USAGE_METRIC;
+#[cfg(feature = "runtime-diagnostics")]
 use diagnostics::MetricsClient;
+#[cfg(feature = "runtime-diagnostics")]
 use diagnostics::global_metrics;
 use serde::Serialize;
 
 #[derive(Debug, Clone)]
 pub struct MemoryUsageDiagnostics {
+    #[cfg(feature = "runtime-diagnostics")]
     metrics: Option<MetricsClient>,
 }
 
 impl MemoryUsageDiagnostics {
     pub fn global() -> Self {
-        Self {
+        #[cfg(feature = "runtime-diagnostics")]
+        return Self {
             metrics: global_metrics(),
-        }
+        };
+        #[cfg(not(feature = "runtime-diagnostics"))]
+        return Self {};
     }
 
+    #[cfg(feature = "runtime-diagnostics")]
     pub fn with_metrics(metrics: MetricsClient) -> Self {
         Self {
             metrics: Some(metrics),
@@ -26,23 +34,33 @@ impl MemoryUsageDiagnostics {
     }
 
     pub fn disabled() -> Self {
-        Self { metrics: None }
+        #[cfg(feature = "runtime-diagnostics")]
+        return Self { metrics: None };
+        #[cfg(not(feature = "runtime-diagnostics"))]
+        return Self {};
     }
 
     pub fn record_shell_command(&self, tool_name: &str, command: &[String], success: bool) {
-        let Some(metrics) = &self.metrics else {
-            return;
-        };
-        for kind in memory_usage_kinds_from_command(command) {
-            let _ = metrics.counter(
-                MEMORIES_USAGE_METRIC,
-                1,
-                &[
-                    ("kind", kind.as_str()),
-                    ("tool", tool_name),
-                    ("success", if success { "true" } else { "false" }),
-                ],
-            );
+        #[cfg(feature = "runtime-diagnostics")]
+        {
+            let Some(metrics) = &self.metrics else {
+                return;
+            };
+            for kind in memory_usage_kinds_from_command(command) {
+                let _ = metrics.counter(
+                    MEMORIES_USAGE_METRIC,
+                    1,
+                    &[
+                        ("kind", kind.as_str()),
+                        ("tool", tool_name),
+                        ("success", if success { "true" } else { "false" }),
+                    ],
+                );
+            }
+        }
+        #[cfg(not(feature = "runtime-diagnostics"))]
+        {
+            let _ = (tool_name, command, success);
         }
     }
 

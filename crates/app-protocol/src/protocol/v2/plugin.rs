@@ -71,6 +71,10 @@ pub struct PluginListParams {
     pub cwds: Option<Vec<AbsolutePathBuf>>,
 }
 
+/// Lists installed Sprite-owned plugins discovered from local catalogs.
+///
+/// This protocol intentionally models only local catalog/plugin state plus
+/// explicitly configured Git sources. It has no implicit network refresh knob.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
@@ -84,6 +88,8 @@ pub struct PluginInstalledParams {
     pub install_suggestion_plugin_names: Option<Vec<String>>,
 }
 
+/// Sprite-owned plugin catalog data discovered from local files or generated
+/// in-memory by Sprite.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
@@ -93,6 +99,8 @@ pub struct PluginListResponse {
     pub catalog_load_errors: Vec<CatalogLoadErrorInfo>,
 }
 
+/// Installed Sprite-owned plugin catalog data discovered from local files or
+/// generated in-memory by Sprite.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
@@ -402,9 +410,11 @@ pub struct PluginInterface {
 #[ts(tag = "type")]
 #[ts(export_to = "v2/")]
 pub enum PluginSource {
+    /// Plugin materialized from a local filesystem path.
     #[serde(rename_all = "camelCase")]
     #[ts(rename_all = "camelCase")]
     Local { path: AbsolutePathBuf },
+    /// Plugin materialized from an explicit user-configured Git source.
     #[serde(rename_all = "camelCase")]
     #[ts(rename_all = "camelCase")]
     Git {

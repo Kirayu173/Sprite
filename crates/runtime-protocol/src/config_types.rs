@@ -53,7 +53,7 @@ pub enum ReasoningSummary {
     None,
 }
 
-/// Controls output length/detail on capable reasoning models via the Responses API.
+/// Controls output length/detail on capable reasoning models.
 /// Serialized with lowercase values to match the provider request payload.
 #[derive(
     Hash,

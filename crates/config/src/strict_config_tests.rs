@@ -125,3 +125,31 @@ collapsed = true"#;
 
     assert_eq!(error, None);
 }
+
+#[test]
+fn strict_config_rejects_legacy_provider_specific_base_url() {
+    let path = Path::new("/tmp/config.toml");
+    let legacy_key = ["openai", "base", "url"].join("_");
+    let contents = format!(
+        r#"
+{legacy_key} = "https://provider.example.invalid/v1""#
+    );
+
+    let error = config_error_from_ignored_toml_fields::<ConfigToml>(path, &contents)
+        .expect("unknown field error");
+
+    assert_eq!(
+        error,
+        ConfigError::new(
+            path.to_path_buf(),
+            TextRange {
+                start: TextPosition { line: 2, column: 1 },
+                end: TextPosition {
+                    line: 2,
+                    column: legacy_key.len(),
+                },
+            },
+            format!("unknown configuration field `{legacy_key}`"),
+        )
+    );
+}

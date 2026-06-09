@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ProviderPolicyCheck": {
+      "enum": [
+        "additionalReview"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "checks": {
+      "items": {
+        "$ref": "#/definitions/ProviderPolicyCheck"
+      },
+      "type": "array"
+    },
+    "threadId": {
+      "type": "string"
+    },
+    "turnId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "checks",
+    "threadId",
+    "turnId"
+  ],
+  "title": "ProviderPolicyCheckNotification",
+  "type": "object"
+}

@@ -248,8 +248,8 @@ pub enum Op {
         environments: Option<Vec<TurnEnvironmentSelection>>,
         /// Optional JSON Schema used to constrain the final assistant message for this turn.
         final_output_json_schema: Option<Value>,
-        /// Optional turn-scoped Responses API `client_metadata`.
-        responsesapi_client_metadata: Option<HashMap<String, String>>,
+        /// Optional turn-scoped provider client metadata.
+        provider_client_metadata: Option<HashMap<String, String>>,
         /// Client-supplied context fragments keyed by an opaque source identifier.
         additional_context: BTreeMap<String, AdditionalContextEntry>,
 
@@ -387,7 +387,7 @@ impl From<Vec<UserInput>> for Op {
             environments: None,
             items: value,
             final_output_json_schema: None,
-            responsesapi_client_metadata: None,
+            provider_client_metadata: None,
             additional_context: Default::default(),
             thread_settings: ThreadSettingsOverrides::default(),
         }
@@ -1312,7 +1312,7 @@ pub enum RuntimeErrorInfo {
     ContextWindowExceeded,
     UsageLimitExceeded,
     ServerOverloaded,
-    CyberPolicy,
+    ProviderPolicy,
     HttpConnectionFailed {
         http_status_code: Option<u16>,
     },
@@ -1349,7 +1349,7 @@ impl RuntimeErrorInfo {
             Self::ContextWindowExceeded
             | Self::UsageLimitExceeded
             | Self::ServerOverloaded
-            | Self::CyberPolicy
+            | Self::ProviderPolicy
             | Self::HttpConnectionFailed { .. }
             | Self::ResponseStreamConnectionFailed { .. }
             | Self::InternalServerError
@@ -1729,8 +1729,8 @@ pub struct UsageLimitSnapshot {
 #[ts(rename_all = "snake_case")]
 pub enum UsageLimitKind {
     ProviderLimitReached,
-    #[serde(alias = "account_limit_reached")]
-    SubscriptionLimitReached,
+    #[serde(alias = "subscription_limit_reached", alias = "account_limit_reached")]
+    WorkspaceLimitReached,
     ProjectLimitReached,
     Other,
 }
@@ -1742,8 +1742,9 @@ impl FromStr for UsageLimitKind {
         match value {
             "provider_limit_reached" => Ok(Self::ProviderLimitReached),
             "subscription_limit_reached" | "account_limit_reached" => {
-                Ok(Self::SubscriptionLimitReached)
+                Ok(Self::WorkspaceLimitReached)
             }
+            "workspace_limit_reached" => Ok(Self::WorkspaceLimitReached),
             "project_limit_reached" => Ok(Self::ProjectLimitReached),
             "other" => Ok(Self::Other),
             other => Err(format!("unknown usage limit kind: {other}")),

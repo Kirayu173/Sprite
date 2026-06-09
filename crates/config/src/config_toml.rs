@@ -26,7 +26,7 @@ use model_provider_info::LMSTUDIO_OSS_PROVIDER_ID;
 use model_provider_info::ModelProviderInfo;
 use model_provider_info::OLLAMA_CHAT_PROVIDER_REMOVED_ERROR;
 use model_provider_info::OLLAMA_OSS_PROVIDER_ID;
-use model_provider_info::OPENAI_PROVIDER_ID;
+use model_provider_info::OPENAI_COMPATIBLE_PROVIDER_ID;
 use runtime_protocol::config_types::AutoCompactTokenLimitScope;
 use runtime_protocol::config_types::Personality;
 use runtime_protocol::config_types::ReasoningSummary;
@@ -50,7 +50,7 @@ use utils_path::normalize_for_path_comparison;
 
 const RESERVED_MODEL_PROVIDER_IDS: [&str; 4] = [
     AMAZON_BEDROCK_PROVIDER_ID,
-    OPENAI_PROVIDER_ID,
+    OPENAI_COMPATIBLE_PROVIDER_ID,
     OLLAMA_OSS_PROVIDER_ID,
     LMSTUDIO_OSS_PROVIDER_ID,
 ];
@@ -266,7 +266,7 @@ pub struct ConfigToml {
     pub model_reasoning_effort: Option<ReasoningEffort>,
     pub plan_mode_reasoning_effort: Option<ReasoningEffort>,
     pub model_reasoning_summary: Option<ReasoningSummary>,
-    /// Optional verbosity control for GPT-5 models (Responses API `text.verbosity`).
+    /// Optional verbosity control for capable reasoning models.
     pub model_verbosity: Option<Verbosity>,
 
     /// Override to force-enable reasoning summaries for the configured model.
@@ -283,8 +283,8 @@ pub struct ConfigToml {
     /// `default`, `priority`, or `flex`; legacy `fast` also works).
     pub service_tier: Option<String>,
 
-    /// Base URL for the built-in `openai`-compatible model provider.
-    pub openai_base_url: Option<String>,
+    /// Base URL for the built-in OpenAI-compatible model provider.
+    pub provider_base_url: Option<String>,
 
     /// Experimental / do not use. Selects the thread store implementation.
     pub experimental_thread_store: Option<ThreadStoreToml>,
@@ -703,5 +703,25 @@ pub fn validate_oss_provider(provider: &str) -> std::io::Result<()> {
                 "Invalid OSS provider '{provider}'. Must be one of: {LMSTUDIO_OSS_PROVIDER_ID}, {OLLAMA_OSS_PROVIDER_ID}"
             ),
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ConfigToml;
+
+    #[test]
+    fn provider_base_url_deserializes_as_generic_provider_config() {
+        let config: ConfigToml = toml::from_str(
+            r#"
+provider_base_url = "https://provider.example.invalid/v1"
+"#,
+        )
+        .expect("provider_base_url should deserialize");
+
+        assert_eq!(
+            config.provider_base_url.as_deref(),
+            Some("https://provider.example.invalid/v1")
+        );
     }
 }

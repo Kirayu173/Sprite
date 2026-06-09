@@ -132,7 +132,7 @@ supports_websockets = true
 
 #[test]
 fn test_supports_remote_compaction_for_openai() {
-    let provider = ModelProviderInfo::create_openai_provider(/*base_url*/ None);
+    let provider = ModelProviderInfo::create_openai_compatible_provider(/*base_url*/ None);
 
     assert!(!provider.supports_remote_compaction());
 }
@@ -283,13 +283,37 @@ fn test_amazon_bedrock_provider_adds_mantle_client_agent_header() {
 
 #[test]
 fn test_built_in_model_providers_include_amazon_bedrock() {
-    let providers = built_in_model_providers(/*openai_base_url*/ None);
+    let providers = built_in_model_providers(/*provider_base_url*/ None);
 
     assert_eq!(
         providers
             .get(AMAZON_BEDROCK_PROVIDER_ID)
             .map(ModelProviderInfo::is_amazon_bedrock),
         Some(true)
+    );
+}
+
+#[test]
+fn test_default_built_in_local_providers_build_api_providers_without_user_config() {
+    let providers = built_in_model_providers(/*provider_base_url*/ None);
+
+    for id in [OLLAMA_OSS_PROVIDER_ID, LMSTUDIO_OSS_PROVIDER_ID] {
+        let provider = providers
+            .get(id)
+            .unwrap_or_else(|| panic!("built-in provider `{id}` should exist"));
+        provider
+            .to_api_provider()
+            .unwrap_or_else(|err| panic!("built-in provider `{id}` should be usable: {err}"));
+    }
+
+    assert_eq!(
+        providers
+            .get(OPENAI_COMPATIBLE_PROVIDER_ID)
+            .expect("OpenAI-compatible provider should exist")
+            .to_api_provider()
+            .unwrap_err()
+            .to_string(),
+        "OpenAI-compatible: OpenAI-compatible providers must set `base_url` explicitly"
     );
 }
 
@@ -303,12 +327,12 @@ fn test_merge_configured_model_providers_adds_custom_provider() {
     let configured_model_providers =
         std::collections::HashMap::from([("custom".to_string(), custom_provider.clone())]);
 
-    let mut expected = built_in_model_providers(/*openai_base_url*/ None);
+    let mut expected = built_in_model_providers(/*provider_base_url*/ None);
     expected.insert("custom".to_string(), custom_provider);
 
     assert_eq!(
         merge_configured_model_providers(
-            built_in_model_providers(/*openai_base_url*/ None),
+            built_in_model_providers(/*provider_base_url*/ None),
             configured_model_providers,
         ),
         Ok(expected)
@@ -328,7 +352,7 @@ fn test_merge_configured_model_providers_applies_amazon_bedrock_profile_override
         },
     )]);
 
-    let mut expected = built_in_model_providers(/*openai_base_url*/ None);
+    let mut expected = built_in_model_providers(/*provider_base_url*/ None);
     expected
         .get_mut(AMAZON_BEDROCK_PROVIDER_ID)
         .expect("Amazon Bedrock provider should be built in")
@@ -339,7 +363,7 @@ fn test_merge_configured_model_providers_applies_amazon_bedrock_profile_override
 
     assert_eq!(
         merge_configured_model_providers(
-            built_in_model_providers(/*openai_base_url*/ None),
+            built_in_model_providers(/*provider_base_url*/ None),
             configured_model_providers,
         ),
         Ok(expected)
@@ -362,7 +386,7 @@ fn test_merge_configured_model_providers_rejects_amazon_bedrock_non_default_fiel
 
     assert_eq!(
         merge_configured_model_providers(
-            built_in_model_providers(/*openai_base_url*/ None),
+            built_in_model_providers(/*provider_base_url*/ None),
             configured_model_providers,
         ),
         Err(
@@ -388,10 +412,10 @@ fn test_merge_configured_model_providers_allows_amazon_bedrock_default_fields() 
 
     assert_eq!(
         merge_configured_model_providers(
-            built_in_model_providers(/*openai_base_url*/ None),
+            built_in_model_providers(/*provider_base_url*/ None),
             configured_model_providers,
         ),
-        Ok(built_in_model_providers(/*openai_base_url*/ None))
+        Ok(built_in_model_providers(/*provider_base_url*/ None))
     );
 }
 
@@ -404,7 +428,7 @@ fn test_validate_provider_aws_rejects_conflicting_auth() {
         }),
         env_key: Some("AWS_BEARER_TOKEN_BEDROCK".to_string()),
         supports_websockets: false,
-        ..ModelProviderInfo::create_openai_provider(/*base_url*/ None)
+        ..ModelProviderInfo::create_openai_compatible_provider(/*base_url*/ None)
     };
 
     assert_eq!(
@@ -421,7 +445,7 @@ fn test_validate_provider_aws_rejects_websockets() {
             region: None,
         }),
         supports_websockets: true,
-        ..ModelProviderInfo::create_openai_provider(/*base_url*/ None)
+        ..ModelProviderInfo::create_openai_compatible_provider(/*base_url*/ None)
     };
 
     assert_eq!(

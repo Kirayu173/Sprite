@@ -98,12 +98,12 @@ pub enum RuntimeError {
     #[error("Selected model is at capacity. Please try a different model.")]
     ServerOverloaded,
     #[error("{message}")]
-    CyberPolicy { message: String },
+    ProviderPolicy { message: String },
     #[error("{0}")]
     ResponseStreamFailed(ResponseStreamFailed),
     #[error("{0}")]
     ConnectionFailed(ConnectionFailedError),
-    #[error("Usage for the selected account or provider is not enabled for this operation.")]
+    #[error("Usage for the selected provider is not enabled for this operation.")]
     UsageNotEnabled,
     #[error("We're currently experiencing high demand, which may cause temporary errors.")]
     InternalServerError,
@@ -165,7 +165,7 @@ impl RuntimeError {
             | RuntimeError::SessionConfiguredNotFirstEvent
             | RuntimeError::UsageLimit(_)
             | RuntimeError::ServerOverloaded
-            | RuntimeError::CyberPolicy { .. } => false,
+            | RuntimeError::ProviderPolicy { .. } => false,
             RuntimeError::Stream(..)
             | RuntimeError::Timeout
             | RuntimeError::RequestTimeout
@@ -193,7 +193,7 @@ impl RuntimeError {
             RuntimeError::ContextWindowExceeded => RuntimeErrorInfo::ContextWindowExceeded,
             RuntimeError::UsageLimit(_) => RuntimeErrorInfo::UsageLimitExceeded,
             RuntimeError::ServerOverloaded => RuntimeErrorInfo::ServerOverloaded,
-            RuntimeError::CyberPolicy { .. } => RuntimeErrorInfo::CyberPolicy,
+            RuntimeError::ProviderPolicy { .. } => RuntimeErrorInfo::ProviderPolicy,
             RuntimeError::RetryLimit(_) => RuntimeErrorInfo::ResponseTooManyFailedAttempts {
                 http_status_code: self.http_status_code_value(),
             },

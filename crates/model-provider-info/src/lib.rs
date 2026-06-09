@@ -26,8 +26,8 @@ const MAX_STREAM_MAX_RETRIES: u64 = 100;
 /// Hard cap for user-configured `request_max_retries`.
 const MAX_REQUEST_MAX_RETRIES: u64 = 100;
 
-const OPENAI_PROVIDER_NAME: &str = "OpenAI";
-pub const OPENAI_PROVIDER_ID: &str = "openai";
+const OPENAI_COMPATIBLE_PROVIDER_NAME: &str = "OpenAI-compatible";
+pub const OPENAI_COMPATIBLE_PROVIDER_ID: &str = "openai-compatible";
 const AMAZON_BEDROCK_PROVIDER_NAME: &str = "Amazon Bedrock";
 pub const AMAZON_BEDROCK_PROVIDER_ID: &str = "amazon-bedrock";
 pub const AMAZON_BEDROCK_GPT_5_5_MODEL_ID: &str = "openai.gpt-5.5";
@@ -322,9 +322,9 @@ impl ModelProviderInfo {
             .unwrap_or(Duration::from_millis(DEFAULT_WEBSOCKET_CONNECT_TIMEOUT_MS))
     }
 
-    pub fn create_openai_provider(base_url: Option<String>) -> ModelProviderInfo {
+    pub fn create_openai_compatible_provider(base_url: Option<String>) -> ModelProviderInfo {
         ModelProviderInfo {
-            name: OPENAI_PROVIDER_NAME.into(),
+            name: OPENAI_COMPATIBLE_PROVIDER_NAME.into(),
             base_url,
             env_key: None,
             env_key_instructions: None,
@@ -377,8 +377,8 @@ impl ModelProviderInfo {
         }
     }
 
-    pub fn is_openai(&self) -> bool {
-        self.name == OPENAI_PROVIDER_NAME
+    pub fn is_openai_compatible(&self) -> bool {
+        self.name == OPENAI_COMPATIBLE_PROVIDER_NAME
     }
 
     pub fn is_amazon_bedrock(&self) -> bool {
@@ -402,10 +402,10 @@ pub const OLLAMA_OSS_PROVIDER_ID: &str = "ollama";
 
 /// Built-in default provider list.
 pub fn built_in_model_providers(
-    openai_base_url: Option<String>,
+    provider_base_url: Option<String>,
 ) -> HashMap<String, ModelProviderInfo> {
     use ModelProviderInfo as P;
-    let openai_provider = P::create_openai_provider(openai_base_url);
+    let openai_compatible_provider = P::create_openai_compatible_provider(provider_base_url);
     let amazon_bedrock_provider = P::create_amazon_bedrock_provider(/*aws*/ None);
 
     // We do not want to be in the business of adjucating which third-party
@@ -413,7 +413,7 @@ pub fn built_in_model_providers(
     // open source ("oss") providers by default. Users are encouraged to add to
     // `model_providers` in config.toml to add their own providers.
     [
-        (OPENAI_PROVIDER_ID, openai_provider),
+        (OPENAI_COMPATIBLE_PROVIDER_ID, openai_compatible_provider),
         (AMAZON_BEDROCK_PROVIDER_ID, amazon_bedrock_provider),
         (
             OLLAMA_OSS_PROVIDER_ID,

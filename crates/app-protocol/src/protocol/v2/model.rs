@@ -84,8 +84,11 @@ pub struct ModelServiceTier {
 pub struct Model {
     pub id: String,
     pub model: String,
+    /// Sprite-owned model migration target for local/runtime catalog transitions.
     pub upgrade: Option<String>,
+    /// Sprite-owned model migration details, not billing or provider account state.
     pub upgrade_info: Option<ModelUpgradeInfo>,
+    /// Sprite-owned availability announcement shown by local clients.
     pub availability_nux: Option<ModelAvailabilityNux>,
     pub display_name: String,
     pub description: String,
@@ -113,6 +116,7 @@ pub struct Model {
 #[ts(export_to = "v2/")]
 pub struct ModelUpgradeInfo {
     pub model: String,
+    /// Optional Sprite-owned copy for local model migration UI.
     pub upgrade_copy: Option<String>,
     pub model_link: Option<String>,
     pub migration_markdown: Option<String>,

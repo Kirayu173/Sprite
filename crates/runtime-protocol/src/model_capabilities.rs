@@ -220,14 +220,20 @@ pub struct ModelPreset {
     pub default_service_tier: Option<String>,
     /// Whether this is the default model for new users.
     pub is_default: bool,
-    /// recommended upgrade model
+    /// Sprite-owned migration target metadata for model catalog transitions.
+    ///
+    /// This is catalog guidance for local/runtime model migrations, not
+    /// account billing, upsell, or official provider product state.
     pub upgrade: Option<ModelUpgrade>,
     /// Whether this preset should appear in the picker UI.
     pub show_in_picker: bool,
-    /// Availability NUX shown when this preset becomes accessible to the user.
+    /// Sprite-owned availability announcement shown by local clients.
+    ///
+    /// This is provider-neutral catalog metadata, not account entitlement state.
     pub availability_nux: Option<ModelAvailabilityNux>,
-    /// whether this model is supported in the api
-    pub supported_in_api: bool,
+    /// Whether this model is available through the configured provider catalog.
+    #[serde(alias = "supported_in_api")]
+    pub provider_available: bool,
     /// Input modalities accepted when composing user turns for this preset.
     #[serde(default = "default_input_modalities")]
     pub input_modalities: Vec<InputModality>,
@@ -354,7 +360,8 @@ pub struct ModelInfo {
     pub supported_reasoning_levels: Vec<ReasoningEffortPreset>,
     pub shell_type: ConfigShellToolType,
     pub visibility: ModelVisibility,
-    pub supported_in_api: bool,
+    #[serde(alias = "supported_in_api")]
+    pub provider_available: bool,
     pub priority: i32,
     #[serde(default)]
     pub additional_speed_tiers: Vec<String>,
@@ -362,7 +369,9 @@ pub struct ModelInfo {
     pub service_tiers: Vec<ModelServiceTier>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default_service_tier: Option<String>,
+    /// Sprite-owned availability announcement shown by local clients.
     pub availability_nux: Option<ModelAvailabilityNux>,
+    /// Sprite-owned migration metadata for local/runtime model transitions.
     pub upgrade: Option<ModelInfoUpgrade>,
     pub base_instructions: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -575,7 +584,7 @@ impl From<ModelInfo> for ModelPreset {
             }),
             show_in_picker: info.visibility == ModelVisibility::List,
             availability_nux: info.availability_nux,
-            supported_in_api: info.supported_in_api,
+            provider_available: info.provider_available,
             input_modalities: info.input_modalities,
         }
     }
@@ -609,14 +618,14 @@ impl ModelInfo {
 }
 
 impl ModelPreset {
-    /// Filter models based on whether managed-account-only models should be visible.
-    pub fn filter_by_auth(
+    /// Filter models based on whether provider-unavailable models should be visible.
+    pub fn filter_by_provider_availability(
         models: Vec<ModelPreset>,
-        allow_managed_account_models: bool,
+        include_provider_unavailable_models: bool,
     ) -> Vec<ModelPreset> {
         models
             .into_iter()
-            .filter(|model| allow_managed_account_models || model.supported_in_api)
+            .filter(|model| include_provider_unavailable_models || model.provider_available)
             .collect()
     }
 
@@ -651,7 +660,7 @@ mod tests {
             supported_reasoning_levels: vec![],
             shell_type: ConfigShellToolType::ShellCommand,
             visibility: ModelVisibility::List,
-            supported_in_api: true,
+            provider_available: true,
             priority: 1,
             additional_speed_tiers: Vec::new(),
             service_tiers: Vec::new(),
@@ -937,12 +946,25 @@ mod tests {
         .expect("deserialize model info");
 
         assert_eq!(model.availability_nux, None);
+        assert!(model.provider_available);
         assert!(!model.supports_image_detail_original);
         assert_eq!(model.web_search_tool_type, WebSearchToolType::Text);
         assert!(!model.supports_search_tool);
         assert!(!model.use_responses_lite);
         assert_eq!(model.auto_review_model_override, None);
         assert_eq!(model.tool_mode, None);
+    }
+
+    #[test]
+    fn model_info_serializes_provider_available_without_auth_api_name() {
+        let value = serde_json::to_value(test_model(/*spec*/ None)).expect("serialize model");
+        let object = value.as_object().expect("model should serialize as object");
+
+        assert_eq!(
+            object.get("provider_available"),
+            Some(&serde_json::Value::Bool(true))
+        );
+        assert!(!object.contains_key("supported_in_api"));
     }
 
     #[test]
