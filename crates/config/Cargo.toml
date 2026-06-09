@@ -20,6 +20,7 @@ model-provider-info = { workspace = true }
 network-proxy = { workspace = true }
 runtime-protocol = { workspace = true }
 utils-absolute-path = { workspace = true }
+utils-json-to-toml = { workspace = true }
 utils-path = { workspace = true }
 dunce = { workspace = true }
 futures = { workspace = true, features = ["alloc", "std"] }

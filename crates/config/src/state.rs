@@ -23,6 +23,7 @@ use utils_absolute_path::AbsolutePathBufGuard;
 pub struct ConfigLoadOptions {
     pub loader_overrides: LoaderOverrides,
     pub strict_config: bool,
+    pub thread_id: Option<String>,
 }
 
 impl From<LoaderOverrides> for ConfigLoadOptions {
@@ -30,6 +31,7 @@ impl From<LoaderOverrides> for ConfigLoadOptions {
         Self {
             loader_overrides,
             strict_config: false,
+            thread_id: None,
         }
     }
 }

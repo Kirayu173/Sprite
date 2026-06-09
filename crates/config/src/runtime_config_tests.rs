@@ -186,6 +186,7 @@ async fn runtime_config_applies_thread_user_and_session_config_sources() {
         .load_options(ConfigLoadOptions {
             loader_overrides: LoaderOverrides::without_host_requirements_for_tests(),
             strict_config: true,
+            ..Default::default()
         })
         .load_with(&TestFileSystem, &loader)
         .await

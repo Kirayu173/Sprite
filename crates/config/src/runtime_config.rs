@@ -109,6 +109,7 @@ pub struct RuntimeConfigBuilder {
     cli_overrides: Vec<(String, TomlValue)>,
     load_options: ConfigLoadOptions,
     model_provider_override: Option<String>,
+    thread_id: Option<String>,
 }
 
 impl Default for RuntimeConfigBuilder {
@@ -119,6 +120,7 @@ impl Default for RuntimeConfigBuilder {
             cli_overrides: Vec::new(),
             load_options: ConfigLoadOptions::default(),
             model_provider_override: None,
+            thread_id: None,
         }
     }
 }
@@ -159,6 +161,11 @@ impl RuntimeConfigBuilder {
         self
     }
 
+    pub fn thread_id(mut self, thread_id: impl Into<String>) -> Self {
+        self.thread_id = Some(thread_id.into());
+        self
+    }
+
     pub async fn load(self) -> io::Result<RuntimeConfig> {
         let fs = NativeConfigFileSystem;
         self.load_with(&fs, &NoopThreadConfigLoader).await
@@ -171,12 +178,14 @@ impl RuntimeConfigBuilder {
     ) -> io::Result<RuntimeConfig> {
         let sprite_home = self.resolve_sprite_home()?;
         let cwd = self.resolve_cwd()?;
+        let mut load_options = self.load_options;
+        load_options.thread_id = self.thread_id.clone();
         let stack = load_config_layers_state(
             fs,
             &sprite_home,
             Some(cwd.clone()),
             &self.cli_overrides,
-            self.load_options,
+            load_options,
             thread_config_loader,
         )
         .await?;

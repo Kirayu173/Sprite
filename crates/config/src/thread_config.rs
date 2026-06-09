@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 use app_protocol::ConfigLayerSource;
 use async_trait::async_trait;
@@ -146,6 +148,72 @@ impl ThreadConfigLoader for NoopThreadConfigLoader {
         _context: ThreadConfigContext,
     ) -> Result<Vec<ThreadConfigSource>, ThreadConfigLoadError> {
         Ok(Vec::new())
+    }
+}
+
+/// Mutable Sprite-owned thread config source.
+///
+/// Later runtime/app-server phases can update this loader directly without
+/// reintroducing the removed official remote config endpoint.
+#[derive(Clone, Debug, Default)]
+pub struct DynamicThreadConfigLoader {
+    default_sources: Arc<RwLock<Vec<ThreadConfigSource>>>,
+    thread_sources: Arc<RwLock<HashMap<String, Vec<ThreadConfigSource>>>>,
+}
+
+impl DynamicThreadConfigLoader {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn set_default_sources(&self, sources: Vec<ThreadConfigSource>) {
+        *self
+            .default_sources
+            .write()
+            .expect("thread config lock poisoned") = sources;
+    }
+
+    pub fn set_thread_sources(
+        &self,
+        thread_id: impl Into<String>,
+        sources: Vec<ThreadConfigSource>,
+    ) {
+        self.thread_sources
+            .write()
+            .expect("thread config lock poisoned")
+            .insert(thread_id.into(), sources);
+    }
+
+    pub fn clear_thread_sources(&self, thread_id: &str) {
+        self.thread_sources
+            .write()
+            .expect("thread config lock poisoned")
+            .remove(thread_id);
+    }
+}
+
+#[async_trait]
+impl ThreadConfigLoader for DynamicThreadConfigLoader {
+    async fn load(
+        &self,
+        context: ThreadConfigContext,
+    ) -> Result<Vec<ThreadConfigSource>, ThreadConfigLoadError> {
+        if let Some(thread_id) = context.thread_id
+            && let Some(sources) = self
+                .thread_sources
+                .read()
+                .expect("thread config lock poisoned")
+                .get(&thread_id)
+                .cloned()
+        {
+            return Ok(sources);
+        }
+
+        Ok(self
+            .default_sources
+            .read()
+            .expect("thread config lock poisoned")
+            .clone())
     }
 }
 

@@ -353,6 +353,7 @@ dependencies = [
  "toml_edit",
  "tracing",
  "utils-absolute-path",
+ "utils-json-to-toml",
  "utils-path",
  "wildmatch",
  "winapi-util",
