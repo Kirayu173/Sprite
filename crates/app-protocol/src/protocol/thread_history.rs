@@ -3,7 +3,7 @@ use crate::protocol::item_builders::build_command_execution_end_item;
 use crate::protocol::item_builders::build_file_change_approval_request_item;
 use crate::protocol::item_builders::build_file_change_begin_item;
 use crate::protocol::item_builders::build_file_change_end_item;
-use crate::protocol::item_builders::build_item_from_guardian_event;
+use crate::protocol::item_builders::build_item_from_auto_review_event;
 use crate::protocol::v2::CollabAgentState;
 use crate::protocol::v2::CollabAgentTool;
 use crate::protocol::v2::CollabAgentToolCallStatus;
@@ -34,8 +34,8 @@ use runtime_protocol::protocol::ErrorEvent;
 use runtime_protocol::protocol::EventMsg;
 use runtime_protocol::protocol::ExecCommandBeginEvent;
 use runtime_protocol::protocol::ExecCommandEndEvent;
-use runtime_protocol::protocol::GuardianAssessmentEvent;
-use runtime_protocol::protocol::GuardianAssessmentStatus;
+use runtime_protocol::protocol::AutoReviewAssessmentEvent;
+use runtime_protocol::protocol::AutoReviewAssessmentStatus;
 use runtime_protocol::protocol::ImageGenerationBeginEvent;
 use runtime_protocol::protocol::ImageGenerationEndEvent;
 use runtime_protocol::protocol::ItemCompletedEvent;
@@ -176,7 +176,7 @@ impl ThreadHistoryBuilder {
             EventMsg::WebSearchEnd(payload) => self.handle_web_search_end(payload),
             EventMsg::ExecCommandBegin(payload) => self.handle_exec_command_begin(payload),
             EventMsg::ExecCommandEnd(payload) => self.handle_exec_command_end(payload),
-            EventMsg::GuardianAssessment(payload) => self.handle_guardian_assessment(payload),
+            EventMsg::AutoReviewAssessment(payload) => self.handle_auto_review_assessment(payload),
             EventMsg::ApplyPatchApprovalRequest(payload) => {
                 self.handle_apply_patch_approval_request(payload)
             }
@@ -426,16 +426,16 @@ impl ThreadHistoryBuilder {
         self.upsert_item_in_turn_id(&payload.turn_id, item);
     }
 
-    fn handle_guardian_assessment(&mut self, payload: &GuardianAssessmentEvent) {
+    fn handle_auto_review_assessment(&mut self, payload: &AutoReviewAssessmentEvent) {
         let status = match payload.status {
-            GuardianAssessmentStatus::InProgress => CommandExecutionStatus::InProgress,
-            GuardianAssessmentStatus::Denied | GuardianAssessmentStatus::Aborted => {
+            AutoReviewAssessmentStatus::InProgress => CommandExecutionStatus::InProgress,
+            AutoReviewAssessmentStatus::Denied | AutoReviewAssessmentStatus::Aborted => {
                 CommandExecutionStatus::Declined
             }
-            GuardianAssessmentStatus::TimedOut => CommandExecutionStatus::Failed,
-            GuardianAssessmentStatus::Approved => return,
+            AutoReviewAssessmentStatus::TimedOut => CommandExecutionStatus::Failed,
+            AutoReviewAssessmentStatus::Approved => return,
         };
-        let Some(item) = build_item_from_guardian_event(payload, status) else {
+        let Some(item) = build_item_from_auto_review_event(payload, status) else {
             return;
         };
         if payload.turn_id.is_empty() {
@@ -2300,7 +2300,7 @@ mod tests {
     }
 
     #[test]
-    fn reconstructs_declined_guardian_command_item() {
+    fn reconstructs_declined_auto_review_command_item() {
         let events = vec![
             EventMsg::TurnStarted(TurnStartedEvent {
                 turn_id: "turn-1".into(),
@@ -2317,13 +2317,13 @@ mod tests {
                 local_images: Vec::new(),
                 ..Default::default()
             }),
-            EventMsg::GuardianAssessment(GuardianAssessmentEvent {
-                id: "review-guardian-exec".into(),
-                target_item_id: Some("guardian-exec".into()),
+            EventMsg::AutoReviewAssessment(AutoReviewAssessmentEvent {
+                id: "review-auto-review-exec".into(),
+                target_item_id: Some("auto-review-exec".into()),
                 turn_id: "turn-1".into(),
                 started_at_ms: 1_000,
                 completed_at_ms: None,
-                status: GuardianAssessmentStatus::InProgress,
+                status: AutoReviewAssessmentStatus::InProgress,
                 risk_level: None,
                 user_authorization: None,
                 rationale: None,
@@ -2331,33 +2331,33 @@ mod tests {
                 action: serde_json::from_value(serde_json::json!({
                     "type": "command",
                     "source": "shell",
-                    "command": "rm -rf /tmp/guardian",
+                    "command": "rm -rf /tmp/auto-review",
                     "cwd": test_path_buf("/tmp"),
                 }))
-                .expect("guardian action"),
+                .expect("auto-review action"),
             }),
-            EventMsg::GuardianAssessment(GuardianAssessmentEvent {
-                id: "review-guardian-exec".into(),
-                target_item_id: Some("guardian-exec".into()),
+            EventMsg::AutoReviewAssessment(AutoReviewAssessmentEvent {
+                id: "review-auto-review-exec".into(),
+                target_item_id: Some("auto-review-exec".into()),
                 turn_id: "turn-1".into(),
                 started_at_ms: 1_000,
                 completed_at_ms: Some(1_042),
-                status: GuardianAssessmentStatus::Denied,
-                risk_level: Some(runtime_protocol::protocol::GuardianRiskLevel::High),
+                status: AutoReviewAssessmentStatus::Denied,
+                risk_level: Some(runtime_protocol::protocol::AutoReviewRiskLevel::High),
                 user_authorization: Some(
-                    runtime_protocol::protocol::GuardianUserAuthorization::Low,
+                    runtime_protocol::protocol::AutoReviewUserAuthorization::Low,
                 ),
                 rationale: Some("Would delete user data.".into()),
                 decision_source: Some(
-                    runtime_protocol::protocol::GuardianAssessmentDecisionSource::Agent,
+                    runtime_protocol::protocol::AutoReviewAssessmentDecisionSource::Agent,
                 ),
                 action: serde_json::from_value(serde_json::json!({
                     "type": "command",
                     "source": "shell",
-                    "command": "rm -rf /tmp/guardian",
+                    "command": "rm -rf /tmp/auto-review",
                     "cwd": test_path_buf("/tmp"),
                 }))
-                .expect("guardian action"),
+                .expect("auto-review action"),
             }),
         ];
 
@@ -2371,14 +2371,14 @@ mod tests {
         assert_eq!(
             turns[0].items[1],
             ThreadItem::CommandExecution {
-                id: "guardian-exec".into(),
-                command: "rm -rf /tmp/guardian".into(),
+                id: "auto-review-exec".into(),
+                command: "rm -rf /tmp/auto-review".into(),
                 cwd: test_path_buf("/tmp").abs(),
                 process_id: None,
                 source: CommandExecutionSource::Agent,
                 status: CommandExecutionStatus::Declined,
                 command_actions: vec![CommandAction::Unknown {
-                    command: "rm -rf /tmp/guardian".into(),
+                    command: "rm -rf /tmp/auto-review".into(),
                 }],
                 aggregated_output: None,
                 exit_code: None,
@@ -2388,7 +2388,7 @@ mod tests {
     }
 
     #[test]
-    fn reconstructs_in_progress_guardian_execve_item() {
+    fn reconstructs_in_progress_auto_review_execve_item() {
         let events = vec![
             EventMsg::TurnStarted(TurnStartedEvent {
                 turn_id: "turn-1".into(),
@@ -2405,13 +2405,13 @@ mod tests {
                 local_images: Vec::new(),
                 ..Default::default()
             }),
-            EventMsg::GuardianAssessment(GuardianAssessmentEvent {
-                id: "review-guardian-execve".into(),
-                target_item_id: Some("guardian-execve".into()),
+            EventMsg::AutoReviewAssessment(AutoReviewAssessmentEvent {
+                id: "review-auto-review-execve".into(),
+                target_item_id: Some("auto-review-execve".into()),
                 turn_id: "turn-1".into(),
                 started_at_ms: 2_000,
                 completed_at_ms: None,
-                status: GuardianAssessmentStatus::InProgress,
+                status: AutoReviewAssessmentStatus::InProgress,
                 risk_level: None,
                 user_authorization: None,
                 rationale: None,
@@ -2423,7 +2423,7 @@ mod tests {
                     "argv": ["/usr/bin/rm", "-f", "/tmp/file.sqlite"],
                     "cwd": test_path_buf("/tmp"),
                 }))
-                .expect("guardian action"),
+                .expect("auto-review action"),
             }),
         ];
 
@@ -2437,7 +2437,7 @@ mod tests {
         assert_eq!(
             turns[0].items[1],
             ThreadItem::CommandExecution {
-                id: "guardian-execve".into(),
+                id: "auto-review-execve".into(),
                 command: "/bin/rm -f /tmp/file.sqlite".into(),
                 cwd: test_path_buf("/tmp").abs(),
                 process_id: None,

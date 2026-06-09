@@ -4,10 +4,6 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
-[[example]]
-name = "generate-proto"
-path = "examples/generate-proto.rs"
-
 [lints]
 workspace = true
 
@@ -30,7 +26,6 @@ futures = { workspace = true, features = ["alloc", "std"] }
 gethostname = { workspace = true }
 indexmap = { workspace = true, features = ["serde"] }
 multimap = { workspace = true }
-prost = "0.14.3"
 schemars = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_ignored = { workspace = true }
@@ -41,8 +36,6 @@ thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 toml = { workspace = true, features = ["preserve_order"] }
 toml_edit = { workspace = true }
-tonic = { workspace = true }
-tonic-prost = { workspace = true }
 tracing = { workspace = true }
 wildmatch = { workspace = true }
 
@@ -65,9 +58,6 @@ windows-sys = { version = "0.52", features = [
 pretty_assertions = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-tokio-stream = { workspace = true, features = ["net"] }
-tonic = { workspace = true, features = ["router", "transport"] }
-tonic-prost-build = { version = "=0.14.3", default-features = false, features = ["transport"] }
 
 [lib]
 doctest = false

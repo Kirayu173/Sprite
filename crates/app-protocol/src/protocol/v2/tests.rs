@@ -65,7 +65,7 @@ fn approvals_reviewer_serializes_auto_review_and_accepts_legacy_guardian_subagen
     );
     assert_eq!(
         serde_json::to_string(&ApprovalsReviewer::AutoReview).expect("serialize reviewer"),
-        "\"guardian_subagent\""
+        "\"auto_review\""
     );
 
     for value in ["user", "auto_review", "guardian_subagent"] {
@@ -2177,7 +2177,7 @@ fn sandbox_policy_rejects_legacy_workspace_write_restricted_read_access_field() 
 
 #[test]
 fn automatic_approval_review_deserializes_aborted_status() {
-    let review: GuardianApprovalReview = serde_json::from_value(json!({
+    let review: AutoApprovalReview = serde_json::from_value(json!({
         "status": "aborted",
         "riskLevel": null,
         "userAuthorization": null,
@@ -2186,8 +2186,8 @@ fn automatic_approval_review_deserializes_aborted_status() {
     .expect("aborted automatic review should deserialize");
     assert_eq!(
         review,
-        GuardianApprovalReview {
-            status: GuardianApprovalReviewStatus::Aborted,
+        AutoApprovalReview {
+            status: AutoApprovalReviewStatus::Aborted,
             risk_level: None,
             user_authorization: None,
             rationale: None,
@@ -2196,26 +2196,26 @@ fn automatic_approval_review_deserializes_aborted_status() {
 }
 
 #[test]
-fn guardian_approval_review_action_round_trips_command_shape() {
+fn auto_review_approval_review_action_round_trips_command_shape() {
     let value = json!({
         "type": "command",
         "source": "shell",
         "command": "rm -rf /tmp/example.sqlite",
         "cwd": absolute_path_string("tmp"),
     });
-    let action: GuardianApprovalReviewAction =
-        serde_json::from_value(value.clone()).expect("guardian review action");
+    let action: AutoApprovalReviewAction =
+        serde_json::from_value(value.clone()).expect("auto-review review action");
 
     assert_eq!(
         action,
-        GuardianApprovalReviewAction::Command {
-            source: GuardianCommandSource::Shell,
+        AutoApprovalReviewAction::Command {
+            source: AutoReviewCommandSource::Shell,
             command: "rm -rf /tmp/example.sqlite".to_string(),
             cwd: absolute_path("tmp"),
         }
     );
     assert_eq!(
-        serde_json::to_value(&action).expect("serialize guardian review action"),
+        serde_json::to_value(&action).expect("serialize auto-review review action"),
         value
     );
 }

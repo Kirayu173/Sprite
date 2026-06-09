@@ -5,9 +5,15 @@ use std::path::PathBuf;
 
 use crate::HookEventsToml;
 use crate::HooksToml;
+use crate::ManagedHooksRequirementsToml;
+use crate::config_requirements::McpServerIdentity;
+use crate::config_requirements::McpServerRequirement;
+use crate::config_requirements::RequirementSource;
 use crate::config_toml::ConfigToml;
 use crate::config_toml::DEFAULT_PROJECT_DOC_MAX_BYTES;
 use crate::loader::load_config_layers_state;
+use crate::mcp_types::McpServerDisabledReason;
+use crate::mcp_types::McpServerTransportConfig;
 use crate::permissions::ResolvedPermissionProfile;
 use crate::permissions::resolve_effective_permission_profile;
 use crate::state::ConfigLayerStack;
@@ -21,6 +27,7 @@ use crate::types::OAuthCredentialsStoreMode;
 use crate::types::SkillsConfig;
 use crate::types::WindowsToml;
 use file_system::ExecutorFileSystem;
+use git_utils::resolve_root_git_project_for_trust;
 use model_provider_info::LEGACY_OLLAMA_CHAT_PROVIDER_ID;
 use model_provider_info::LMSTUDIO_OSS_PROVIDER_ID;
 use model_provider_info::ModelProviderInfo;
@@ -173,11 +180,13 @@ impl RuntimeConfigBuilder {
             thread_config_loader,
         )
         .await?;
+        let repo_root = resolve_root_git_project_for_trust(fs, &cwd).await;
 
         RuntimeConfig::from_layer_stack(
             stack,
             sprite_home,
             cwd,
+            repo_root,
             self.model_provider_override.as_deref(),
         )
     }
@@ -217,6 +226,7 @@ impl RuntimeConfig {
         config_layer_stack: ConfigLayerStack,
         sprite_home: impl AsRef<Path>,
         cwd: AbsolutePathBuf,
+        repo_root: Option<AbsolutePathBuf>,
         model_provider_override: Option<&str>,
     ) -> io::Result<Self> {
         let effective_config = config_layer_stack.effective_config();
@@ -232,6 +242,7 @@ impl RuntimeConfig {
             config_layer_stack,
             sprite_home,
             cwd,
+            repo_root,
             model_provider_override,
         )
     }
@@ -241,8 +252,10 @@ impl RuntimeConfig {
         config_layer_stack: ConfigLayerStack,
         sprite_home: AbsolutePathBuf,
         cwd: AbsolutePathBuf,
+        repo_root: Option<AbsolutePathBuf>,
         model_provider_override: Option<&str>,
     ) -> io::Result<Self> {
+        let requirements = config_layer_stack.requirements();
         let model_providers = merge_configured_model_providers(
             built_in_model_providers(raw.provider_base_url.clone()),
             raw.model_providers.clone(),
@@ -262,7 +275,10 @@ impl RuntimeConfig {
                 io::Error::new(io::ErrorKind::InvalidInput, message)
             })?;
 
-        let active_project = raw.get_active_project(cwd.as_path(), /*repo_root*/ None);
+        let active_project = raw.get_active_project(
+            cwd.as_path(),
+            repo_root.as_ref().map(AbsolutePathBuf::as_path),
+        );
         let windows_sandbox_level = windows_sandbox_level(&raw.windows);
         let ResolvedPermissionProfile {
             profile: permission_profile,
@@ -270,37 +286,64 @@ impl RuntimeConfig {
             workspace_roots: permission_profile_workspace_roots,
             warnings: permission_warnings,
         } = if let Some(default_permissions) = raw.default_permissions.as_deref() {
-            resolve_effective_permission_profile(
+            let resolved = resolve_effective_permission_profile(
                 raw.permissions.as_ref(),
                 Some(default_permissions),
                 raw.sandbox_workspace_write.as_ref(),
                 active_project.as_ref(),
                 windows_sandbox_level,
                 cwd.as_path(),
-            )?
+            )?;
+            requirements.permission_profile.can_set(&resolved.profile)?;
+            resolved
         } else {
             let permission_profile = futures::executor::block_on(raw.derive_permission_profile(
                 raw.sandbox_mode,
                 windows_sandbox_level,
                 active_project.as_ref(),
-                Some(&config_layer_stack.requirements().permission_profile.value),
+                Some(&requirements.permission_profile.value),
             ));
+            requirements
+                .permission_profile
+                .can_set(&permission_profile)?;
+            let active_profile_name = raw
+                .sandbox_mode
+                .map(legacy_sandbox_profile_name)
+                .unwrap_or_else(|| permission_profile_name(&permission_profile));
             ResolvedPermissionProfile {
                 profile: permission_profile,
-                active_profile: ActivePermissionProfile::new(
-                    raw.sandbox_mode
-                        .map(legacy_sandbox_profile_name)
-                        .unwrap_or_else(|| {
-                            crate::permissions::default_builtin_permission_profile_name(
-                                active_project.as_ref(),
-                                windows_sandbox_level,
-                            )
-                        }),
-                ),
+                active_profile: ActivePermissionProfile::new(active_profile_name),
                 workspace_roots: Vec::new(),
                 warnings: Vec::new(),
             }
         };
+        let approval_policy = constrained_value(
+            requirements.approval_policy.clone(),
+            raw.approval_policy.unwrap_or_default(),
+        )?;
+        let approvals_reviewer = constrained_value(
+            requirements.approvals_reviewer.clone(),
+            raw.approvals_reviewer.unwrap_or_default(),
+        )?;
+        let hooks = resolve_runtime_hooks(
+            raw.hooks.clone(),
+            requirements.managed_hooks.as_ref(),
+            requirements
+                .allow_managed_hooks_only
+                .as_ref()
+                .map(|requirement| requirement.value),
+        )?;
+        let mcp_servers = resolve_runtime_mcp_servers(
+            raw.mcp_servers.clone(),
+            requirements
+                .mcp_servers
+                .as_ref()
+                .map(|requirement| (&requirement.value, &requirement.source)),
+        );
+        let web_search = constrained_value(
+            requirements.web_search_mode.clone(),
+            raw.web_search.unwrap_or_default(),
+        )?;
 
         Ok(Self {
             model: raw
@@ -316,8 +359,8 @@ impl RuntimeConfig {
             model_provider_id,
             model_provider,
             model_providers,
-            approval_policy: raw.approval_policy.unwrap_or_default(),
-            approvals_reviewer: raw.approvals_reviewer.unwrap_or_default(),
+            approval_policy,
+            approvals_reviewer,
             permission_profile,
             active_permission_profile,
             permission_profile_workspace_roots,
@@ -326,15 +369,12 @@ impl RuntimeConfig {
                 raw.shell_environment_policy.clone(),
             ),
             allow_login_shell: raw.allow_login_shell.unwrap_or(true),
-            mcp_servers: raw.mcp_servers.clone(),
+            mcp_servers,
             mcp_oauth_credentials_store: raw.mcp_oauth_credentials_store.unwrap_or_default(),
             mcp_oauth_callback_port: raw.mcp_oauth_callback_port,
             mcp_oauth_callback_url: raw.mcp_oauth_callback_url.clone(),
             skills: raw.skills.clone().unwrap_or_default(),
-            hooks: raw.hooks.clone().unwrap_or_else(|| HooksToml {
-                events: HookEventsToml::default(),
-                state: Default::default(),
-            }),
+            hooks,
             windows: raw.windows.clone().unwrap_or_default(),
             memories: raw.memories.clone().map(Into::into).unwrap_or_default(),
             project_doc_max_bytes: raw
@@ -355,7 +395,7 @@ impl RuntimeConfig {
                 .clone()
                 .map(AbsolutePathBuf::into_path_buf)
                 .unwrap_or_else(|| sprite_home.clone().into_path_buf()),
-            web_search: raw.web_search.unwrap_or_default(),
+            web_search,
             web_search_tool_config: raw
                 .tools
                 .as_ref()
@@ -402,11 +442,108 @@ fn windows_sandbox_level(windows: &Option<WindowsToml>) -> WindowsSandboxLevel {
     }
 }
 
+fn constrained_value<T: Clone + Send + Sync>(
+    mut constrained: crate::ConstrainedWithSource<T>,
+    value: T,
+) -> io::Result<T> {
+    constrained.set(value)?;
+    Ok(constrained.get().clone())
+}
+
+fn resolve_runtime_hooks(
+    configured_hooks: Option<HooksToml>,
+    managed_hooks: Option<&crate::ConstrainedWithSource<ManagedHooksRequirementsToml>>,
+    allow_managed_hooks_only: Option<bool>,
+) -> io::Result<HooksToml> {
+    if let Some(managed_hooks) = managed_hooks {
+        let required = managed_hooks.get().clone();
+        managed_hooks.can_set(&required)?;
+        return Ok(HooksToml {
+            events: required.hooks,
+            state: Default::default(),
+        });
+    }
+
+    if allow_managed_hooks_only.unwrap_or(false) {
+        return Ok(default_hooks());
+    }
+
+    Ok(configured_hooks.unwrap_or_else(default_hooks))
+}
+
+fn default_hooks() -> HooksToml {
+    HooksToml {
+        events: HookEventsToml::default(),
+        state: Default::default(),
+    }
+}
+
+fn resolve_runtime_mcp_servers(
+    mut servers: HashMap<String, crate::McpServerConfig>,
+    requirements: Option<(
+        &std::collections::BTreeMap<String, McpServerRequirement>,
+        &RequirementSource,
+    )>,
+) -> HashMap<String, crate::McpServerConfig> {
+    let Some((requirements, source)) = requirements else {
+        return servers;
+    };
+
+    let disabled_reason = McpServerDisabledReason::Requirements {
+        source: source.clone(),
+    };
+    for (name, server) in &mut servers {
+        let requirement = requirements.get(name);
+        if !requirement
+            .is_some_and(|requirement| mcp_server_matches_requirement(server, requirement))
+        {
+            server.enabled = false;
+            server.disabled_reason = Some(disabled_reason.clone());
+        }
+    }
+
+    servers
+}
+
+fn mcp_server_matches_requirement(
+    server: &crate::McpServerConfig,
+    requirement: &McpServerRequirement,
+) -> bool {
+    match (&server.transport, &requirement.identity) {
+        (
+            McpServerTransportConfig::Stdio { command, .. },
+            McpServerIdentity::Command {
+                command: required_command,
+            },
+        ) => command == required_command,
+        (
+            McpServerTransportConfig::StreamableHttp { url, .. },
+            McpServerIdentity::Url { url: required_url },
+        ) => url == required_url,
+        _ => false,
+    }
+}
+
 fn legacy_sandbox_profile_name(sandbox_mode: SandboxMode) -> &'static str {
     match sandbox_mode {
         SandboxMode::ReadOnly => crate::permissions::BUILT_IN_READ_ONLY_PROFILE,
         SandboxMode::WorkspaceWrite => crate::permissions::BUILT_IN_WORKSPACE_PROFILE,
         SandboxMode::DangerFullAccess => crate::permissions::BUILT_IN_DANGER_FULL_ACCESS_PROFILE,
+    }
+}
+
+fn permission_profile_name(permission_profile: &PermissionProfile) -> &'static str {
+    match crate::sandbox_mode_requirement_for_permission_profile(permission_profile) {
+        crate::SandboxModeRequirement::ReadOnly => crate::permissions::BUILT_IN_READ_ONLY_PROFILE,
+        crate::SandboxModeRequirement::WorkspaceWrite => {
+            crate::permissions::BUILT_IN_WORKSPACE_PROFILE
+        }
+        crate::SandboxModeRequirement::DangerFullAccess => {
+            crate::permissions::BUILT_IN_DANGER_FULL_ACCESS_PROFILE
+        }
+        crate::SandboxModeRequirement::ExternalSandbox => {
+            crate::permissions::BUILT_IN_READ_ONLY_PROFILE
+        }
     }
 }
 

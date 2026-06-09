@@ -474,13 +474,13 @@
             },
             "method": {
               "enum": [
-                "thread/approveGuardianDeniedAction"
+                "thread/approveAutoReviewDeniedAction"
               ],
-              "title": "Thread/approveGuardianDeniedActionRequestMethod",
+              "title": "Thread/approveAutoReviewDeniedActionRequestMethod",
               "type": "string"
             },
             "params": {
-              "$ref": "#/definitions/v2/ThreadApproveGuardianDeniedActionParams"
+              "$ref": "#/definitions/v2/ThreadApproveAutoReviewDeniedActionParams"
             }
           },
           "required": [
@@ -488,7 +488,7 @@
             "method",
             "params"
           ],
-          "title": "Thread/approveGuardianDeniedActionRequest",
+          "title": "Thread/approveAutoReviewDeniedActionRequest",
           "type": "object"
         },
         {
@@ -3840,7 +3840,7 @@
               "type": "string"
             },
             "params": {
-              "$ref": "#/definitions/v2/ItemGuardianApprovalReviewStartedNotification"
+              "$ref": "#/definitions/v2/ItemAutoApprovalReviewStartedNotification"
             }
           },
           "required": [
@@ -3860,7 +3860,7 @@
               "type": "string"
             },
             "params": {
-              "$ref": "#/definitions/v2/ItemGuardianApprovalReviewCompletedNotification"
+              "$ref": "#/definitions/v2/ItemAutoApprovalReviewCompletedNotification"
             }
           },
           "required": [
@@ -4340,20 +4340,20 @@
           "properties": {
             "method": {
               "enum": [
-                "guardianWarning"
+                "autoReviewWarning"
               ],
-              "title": "GuardianWarningNotificationMethod",
+              "title": "AutoReviewWarningNotificationMethod",
               "type": "string"
             },
             "params": {
-              "$ref": "#/definitions/v2/GuardianWarningNotification"
+              "$ref": "#/definitions/v2/AutoReviewWarningNotification"
             }
           },
           "required": [
             "method",
             "params"
           ],
-          "title": "GuardianWarningNotification",
+          "title": "AutoReviewWarningNotification",
           "type": "object"
         },
         {
@@ -4974,8 +4974,7 @@
         "description": "Configures who approval requests are routed to for review. Examples include sandbox escapes, blocked network access, MCP approval prompts, and ARC escalations. Defaults to `user`. `auto_review` uses a carefully prompted subagent to gather relevant context and apply a risk-based decision framework before approving or denying the request. The legacy value `guardian_subagent` is accepted for compatibility.",
         "enum": [
           "user",
-          "auto_review",
-          "guardian_subagent"
+          "auto_review"
         ],
         "type": "string"
       },
@@ -5029,6 +5028,251 @@
           }
         ]
       },
+      "AutoApprovalReview": {
+        "description": "Approval auto-review payload used by `item/autoApprovalReview/*` notifications.",
+        "properties": {
+          "rationale": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "riskLevel": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/v2/AutoReviewRiskLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/definitions/v2/AutoApprovalReviewStatus"
+          },
+          "userAuthorization": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/v2/AutoReviewUserAuthorization"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "AutoApprovalReviewAction": {
+        "oneOf": [
+          {
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "cwd": {
+                "$ref": "#/definitions/v2/AbsolutePathBuf"
+              },
+              "source": {
+                "$ref": "#/definitions/v2/AutoReviewCommandSource"
+              },
+              "type": {
+                "enum": [
+                  "command"
+                ],
+                "title": "CommandAutoApprovalReviewActionType",
+                "type": "string"
+              }
+            },
+            "required": [
+              "command",
+              "cwd",
+              "source",
+              "type"
+            ],
+            "title": "CommandAutoApprovalReviewAction",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "argv": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "cwd": {
+                "$ref": "#/definitions/v2/AbsolutePathBuf"
+              },
+              "program": {
+                "type": "string"
+              },
+              "source": {
+                "$ref": "#/definitions/v2/AutoReviewCommandSource"
+              },
+              "type": {
+                "enum": [
+                  "execve"
+                ],
+                "title": "ExecveAutoApprovalReviewActionType",
+                "type": "string"
+              }
+            },
+            "required": [
+              "argv",
+              "cwd",
+              "program",
+              "source",
+              "type"
+            ],
+            "title": "ExecveAutoApprovalReviewAction",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "cwd": {
+                "$ref": "#/definitions/v2/AbsolutePathBuf"
+              },
+              "files": {
+                "items": {
+                  "$ref": "#/definitions/v2/AbsolutePathBuf"
+                },
+                "type": "array"
+              },
+              "type": {
+                "enum": [
+                  "applyPatch"
+                ],
+                "title": "ApplyPatchAutoApprovalReviewActionType",
+                "type": "string"
+              }
+            },
+            "required": [
+              "cwd",
+              "files",
+              "type"
+            ],
+            "title": "ApplyPatchAutoApprovalReviewAction",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "host": {
+                "type": "string"
+              },
+              "port": {
+                "format": "uint16",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "protocol": {
+                "$ref": "#/definitions/v2/NetworkApprovalProtocol"
+              },
+              "target": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "networkAccess"
+                ],
+                "title": "NetworkAccessAutoApprovalReviewActionType",
+                "type": "string"
+              }
+            },
+            "required": [
+              "host",
+              "port",
+              "protocol",
+              "target",
+              "type"
+            ],
+            "title": "NetworkAccessAutoApprovalReviewAction",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "integrationId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "integrationName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "server": {
+                "type": "string"
+              },
+              "toolName": {
+                "type": "string"
+              },
+              "toolTitle": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "mcpToolCall"
+                ],
+                "title": "McpToolCallAutoApprovalReviewActionType",
+                "type": "string"
+              }
+            },
+            "required": [
+              "server",
+              "toolName",
+              "type"
+            ],
+            "title": "McpToolCallAutoApprovalReviewAction",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "permissions": {
+                "$ref": "#/definitions/v2/RequestPermissionProfile"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "requestPermissions"
+                ],
+                "title": "RequestPermissionsAutoApprovalReviewActionType",
+                "type": "string"
+              }
+            },
+            "required": [
+              "permissions",
+              "type"
+            ],
+            "title": "RequestPermissionsAutoApprovalReviewAction",
+            "type": "object"
+          }
+        ]
+      },
+      "AutoApprovalReviewStatus": {
+        "description": "Lifecycle state for an approval auto-review.",
+        "enum": [
+          "inProgress",
+          "approved",
+          "denied",
+          "timedOut",
+          "aborted"
+        ],
+        "type": "string"
+      },
       "AutoCompactTokenLimitScope": {
         "description": "Selects which part of the active context is charged against `model_auto_compact_token_limit`.",
         "oneOf": [
@@ -5048,12 +5292,58 @@
           }
         ]
       },
+      "AutoReviewCommandSource": {
+        "enum": [
+          "shell",
+          "unifiedExec"
+        ],
+        "type": "string"
+      },
       "AutoReviewDecisionSource": {
-        "description": "[UNSTABLE] Source that produced a terminal approval auto-review decision.",
+        "description": "Source that produced a terminal approval auto-review decision.",
         "enum": [
           "agent"
         ],
         "type": "string"
+      },
+      "AutoReviewRiskLevel": {
+        "description": "Risk level assigned by approval auto-review.",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ],
+        "type": "string"
+      },
+      "AutoReviewUserAuthorization": {
+        "description": "Authorization level assigned by approval auto-review.",
+        "enum": [
+          "unknown",
+          "low",
+          "medium",
+          "high"
+        ],
+        "type": "string"
+      },
+      "AutoReviewWarningNotification": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "message": {
+            "description": "Concise auto-review warning message for the user.",
+            "type": "string"
+          },
+          "threadId": {
+            "description": "Thread target for the auto-review warning.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "threadId"
+        ],
+        "title": "AutoReviewWarningNotification",
+        "type": "object"
       },
       "ByteRange": {
         "properties": {
@@ -7656,297 +7946,6 @@
         },
         "type": "object"
       },
-      "GuardianApprovalReview": {
-        "description": "[UNSTABLE] Temporary approval auto-review payload used by `item/autoApprovalReview/*` notifications. This shape is expected to change soon.",
-        "properties": {
-          "rationale": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "riskLevel": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/v2/GuardianRiskLevel"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "status": {
-            "$ref": "#/definitions/v2/GuardianApprovalReviewStatus"
-          },
-          "userAuthorization": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/v2/GuardianUserAuthorization"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "status"
-        ],
-        "type": "object"
-      },
-      "GuardianApprovalReviewAction": {
-        "oneOf": [
-          {
-            "properties": {
-              "command": {
-                "type": "string"
-              },
-              "cwd": {
-                "$ref": "#/definitions/v2/AbsolutePathBuf"
-              },
-              "source": {
-                "$ref": "#/definitions/v2/GuardianCommandSource"
-              },
-              "type": {
-                "enum": [
-                  "command"
-                ],
-                "title": "CommandGuardianApprovalReviewActionType",
-                "type": "string"
-              }
-            },
-            "required": [
-              "command",
-              "cwd",
-              "source",
-              "type"
-            ],
-            "title": "CommandGuardianApprovalReviewAction",
-            "type": "object"
-          },
-          {
-            "properties": {
-              "argv": {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              "cwd": {
-                "$ref": "#/definitions/v2/AbsolutePathBuf"
-              },
-              "program": {
-                "type": "string"
-              },
-              "source": {
-                "$ref": "#/definitions/v2/GuardianCommandSource"
-              },
-              "type": {
-                "enum": [
-                  "execve"
-                ],
-                "title": "ExecveGuardianApprovalReviewActionType",
-                "type": "string"
-              }
-            },
-            "required": [
-              "argv",
-              "cwd",
-              "program",
-              "source",
-              "type"
-            ],
-            "title": "ExecveGuardianApprovalReviewAction",
-            "type": "object"
-          },
-          {
-            "properties": {
-              "cwd": {
-                "$ref": "#/definitions/v2/AbsolutePathBuf"
-              },
-              "files": {
-                "items": {
-                  "$ref": "#/definitions/v2/AbsolutePathBuf"
-                },
-                "type": "array"
-              },
-              "type": {
-                "enum": [
-                  "applyPatch"
-                ],
-                "title": "ApplyPatchGuardianApprovalReviewActionType",
-                "type": "string"
-              }
-            },
-            "required": [
-              "cwd",
-              "files",
-              "type"
-            ],
-            "title": "ApplyPatchGuardianApprovalReviewAction",
-            "type": "object"
-          },
-          {
-            "properties": {
-              "host": {
-                "type": "string"
-              },
-              "port": {
-                "format": "uint16",
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              "protocol": {
-                "$ref": "#/definitions/v2/NetworkApprovalProtocol"
-              },
-              "target": {
-                "type": "string"
-              },
-              "type": {
-                "enum": [
-                  "networkAccess"
-                ],
-                "title": "NetworkAccessGuardianApprovalReviewActionType",
-                "type": "string"
-              }
-            },
-            "required": [
-              "host",
-              "port",
-              "protocol",
-              "target",
-              "type"
-            ],
-            "title": "NetworkAccessGuardianApprovalReviewAction",
-            "type": "object"
-          },
-          {
-            "properties": {
-              "integrationId": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "integrationName": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "server": {
-                "type": "string"
-              },
-              "toolName": {
-                "type": "string"
-              },
-              "toolTitle": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "type": {
-                "enum": [
-                  "mcpToolCall"
-                ],
-                "title": "McpToolCallGuardianApprovalReviewActionType",
-                "type": "string"
-              }
-            },
-            "required": [
-              "server",
-              "toolName",
-              "type"
-            ],
-            "title": "McpToolCallGuardianApprovalReviewAction",
-            "type": "object"
-          },
-          {
-            "properties": {
-              "permissions": {
-                "$ref": "#/definitions/v2/RequestPermissionProfile"
-              },
-              "reason": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "type": {
-                "enum": [
-                  "requestPermissions"
-                ],
-                "title": "RequestPermissionsGuardianApprovalReviewActionType",
-                "type": "string"
-              }
-            },
-            "required": [
-              "permissions",
-              "type"
-            ],
-            "title": "RequestPermissionsGuardianApprovalReviewAction",
-            "type": "object"
-          }
-        ]
-      },
-      "GuardianApprovalReviewStatus": {
-        "description": "[UNSTABLE] Lifecycle state for an approval auto-review.",
-        "enum": [
-          "inProgress",
-          "approved",
-          "denied",
-          "timedOut",
-          "aborted"
-        ],
-        "type": "string"
-      },
-      "GuardianCommandSource": {
-        "enum": [
-          "shell",
-          "unifiedExec"
-        ],
-        "type": "string"
-      },
-      "GuardianRiskLevel": {
-        "description": "[UNSTABLE] Risk level assigned by approval auto-review.",
-        "enum": [
-          "low",
-          "medium",
-          "high",
-          "critical"
-        ],
-        "type": "string"
-      },
-      "GuardianUserAuthorization": {
-        "description": "[UNSTABLE] Authorization level assigned by approval auto-review.",
-        "enum": [
-          "unknown",
-          "low",
-          "medium",
-          "high"
-        ],
-        "type": "string"
-      },
-      "GuardianWarningNotification": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-          "message": {
-            "description": "Concise guardian warning message for the user.",
-            "type": "string"
-          },
-          "threadId": {
-            "description": "Thread target for the guardian warning.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "message",
-          "threadId"
-        ],
-        "title": "GuardianWarningNotification",
-        "type": "object"
-      },
       "HookCompletedNotification": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
@@ -8377,39 +8376,12 @@
           }
         ]
       },
-      "ItemCompletedNotification": {
+      "ItemAutoApprovalReviewCompletedNotification": {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-          "completedAtMs": {
-            "description": "Unix timestamp (in milliseconds) when this item lifecycle completed.",
-            "format": "int64",
-            "type": "integer"
-          },
-          "item": {
-            "$ref": "#/definitions/v2/ThreadItem"
-          },
-          "threadId": {
-            "type": "string"
-          },
-          "turnId": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "completedAtMs",
-          "item",
-          "threadId",
-          "turnId"
-        ],
-        "title": "ItemCompletedNotification",
-        "type": "object"
-      },
-      "ItemGuardianApprovalReviewCompletedNotification": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "description": "[UNSTABLE] Temporary notification payload for approval auto-review. This shape is expected to change soon.",
+        "description": "Notification payload emitted when an approval auto-review reaches a terminal state.",
         "properties": {
           "action": {
-            "$ref": "#/definitions/v2/GuardianApprovalReviewAction"
+            "$ref": "#/definitions/v2/AutoApprovalReviewAction"
           },
           "completedAtMs": {
             "description": "Unix timestamp (in milliseconds) when this review completed.",
@@ -8420,7 +8392,7 @@
             "$ref": "#/definitions/v2/AutoReviewDecisionSource"
           },
           "review": {
-            "$ref": "#/definitions/v2/GuardianApprovalReview"
+            "$ref": "#/definitions/v2/AutoApprovalReview"
           },
           "reviewId": {
             "description": "Stable identifier for this review.",
@@ -8455,18 +8427,18 @@
           "threadId",
           "turnId"
         ],
-        "title": "ItemGuardianApprovalReviewCompletedNotification",
+        "title": "ItemAutoApprovalReviewCompletedNotification",
         "type": "object"
       },
-      "ItemGuardianApprovalReviewStartedNotification": {
+      "ItemAutoApprovalReviewStartedNotification": {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "description": "[UNSTABLE] Temporary notification payload for approval auto-review. This shape is expected to change soon.",
+        "description": "Notification payload emitted when an approval auto-review starts.",
         "properties": {
           "action": {
-            "$ref": "#/definitions/v2/GuardianApprovalReviewAction"
+            "$ref": "#/definitions/v2/AutoApprovalReviewAction"
           },
           "review": {
-            "$ref": "#/definitions/v2/GuardianApprovalReview"
+            "$ref": "#/definitions/v2/AutoApprovalReview"
           },
           "reviewId": {
             "description": "Stable identifier for this review.",
@@ -8499,7 +8471,34 @@
           "threadId",
           "turnId"
         ],
-        "title": "ItemGuardianApprovalReviewStartedNotification",
+        "title": "ItemAutoApprovalReviewStartedNotification",
+        "type": "object"
+      },
+      "ItemCompletedNotification": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "completedAtMs": {
+            "description": "Unix timestamp (in milliseconds) when this item lifecycle completed.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "item": {
+            "$ref": "#/definitions/v2/ThreadItem"
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "completedAtMs",
+          "item",
+          "threadId",
+          "turnId"
+        ],
+        "title": "ItemCompletedNotification",
         "type": "object"
       },
       "ItemStartedNotification": {
@@ -12740,11 +12739,11 @@
         ],
         "type": "string"
       },
-      "ThreadApproveGuardianDeniedActionParams": {
+      "ThreadApproveAutoReviewDeniedActionParams": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
           "event": {
-            "description": "Serialized `runtime_protocol::protocol::GuardianAssessmentEvent`."
+            "description": "Serialized `runtime_protocol::protocol::AutoReviewAssessmentEvent`."
           },
           "threadId": {
             "type": "string"
@@ -12754,12 +12753,12 @@
           "event",
           "threadId"
         ],
-        "title": "ThreadApproveGuardianDeniedActionParams",
+        "title": "ThreadApproveAutoReviewDeniedActionParams",
         "type": "object"
       },
-      "ThreadApproveGuardianDeniedActionResponse": {
+      "ThreadApproveAutoReviewDeniedActionResponse": {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "ThreadApproveGuardianDeniedActionResponse",
+        "title": "ThreadApproveAutoReviewDeniedActionResponse",
         "type": "object"
       },
       "ThreadArchiveParams": {

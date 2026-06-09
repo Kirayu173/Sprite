@@ -6,13 +6,14 @@ use super::NetworkApprovalContext;
 use super::NetworkApprovalProtocol;
 use super::NetworkPolicyAmendment;
 use super::RequestPermissionProfile;
+use super::UnsupportedUserInputVariant;
 use super::UserInput;
 use super::shared::v2_enum_from_core;
 use crate::protocol::item_builders::convert_patch_changes;
 use experimental_api_macros::ExperimentalApi;
-use runtime_protocol::approvals::GuardianAssessmentAction as CoreGuardianAssessmentAction;
-use runtime_protocol::approvals::GuardianAssessmentDecisionSource as CoreGuardianAssessmentDecisionSource;
-use runtime_protocol::approvals::GuardianCommandSource as CoreGuardianCommandSource;
+use runtime_protocol::approvals::AutoReviewAssessmentAction as CoreAutoReviewAssessmentAction;
+use runtime_protocol::approvals::AutoReviewAssessmentDecisionSource as CoreAutoReviewAssessmentDecisionSource;
+use runtime_protocol::approvals::AutoReviewCommandSource as CoreAutoReviewCommandSource;
 use runtime_protocol::items::AgentMessageContent as CoreAgentMessageContent;
 use runtime_protocol::items::McpToolCallStatus as CoreMcpToolCallStatus;
 use runtime_protocol::items::TurnItem as CoreTurnItem;
@@ -25,8 +26,8 @@ use runtime_protocol::parse_command::ParsedCommand as CoreParsedCommand;
 use runtime_protocol::protocol::AgentStatus as CoreAgentStatus;
 use runtime_protocol::protocol::ExecCommandSource as CoreExecCommandSource;
 use runtime_protocol::protocol::ExecCommandStatus as CoreExecCommandStatus;
-use runtime_protocol::protocol::GuardianRiskLevel as CoreGuardianRiskLevel;
-use runtime_protocol::protocol::GuardianUserAuthorization as CoreGuardianUserAuthorization;
+use runtime_protocol::protocol::AutoReviewRiskLevel as CoreAutoReviewRiskLevel;
+use runtime_protocol::protocol::AutoReviewUserAuthorization as CoreAutoReviewUserAuthorization;
 use runtime_protocol::protocol::PatchApplyStatus as CorePatchApplyStatus;
 use runtime_protocol::protocol::ReviewDecision as CoreReviewDecision;
 use schemars::JsonSchema;
@@ -401,8 +402,8 @@ impl ThreadItem {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-/// [UNSTABLE] Lifecycle state for an approval auto-review.
-pub enum GuardianApprovalReviewStatus {
+/// Lifecycle state for an approval auto-review.
+pub enum AutoApprovalReviewStatus {
     InProgress,
     Approved,
     Denied,
@@ -413,15 +414,15 @@ pub enum GuardianApprovalReviewStatus {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-/// [UNSTABLE] Source that produced a terminal approval auto-review decision.
+/// Source that produced a terminal approval auto-review decision.
 pub enum AutoReviewDecisionSource {
     Agent,
 }
 
-impl From<CoreGuardianAssessmentDecisionSource> for AutoReviewDecisionSource {
-    fn from(value: CoreGuardianAssessmentDecisionSource) -> Self {
+impl From<CoreAutoReviewAssessmentDecisionSource> for AutoReviewDecisionSource {
+    fn from(value: CoreAutoReviewAssessmentDecisionSource) -> Self {
         match value {
-            CoreGuardianAssessmentDecisionSource::Agent => Self::Agent,
+            CoreAutoReviewAssessmentDecisionSource::Agent => Self::Agent,
         }
     }
 }
@@ -429,21 +430,21 @@ impl From<CoreGuardianAssessmentDecisionSource> for AutoReviewDecisionSource {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "lowercase")]
 #[ts(export_to = "v2/")]
-/// [UNSTABLE] Risk level assigned by approval auto-review.
-pub enum GuardianRiskLevel {
+/// Risk level assigned by approval auto-review.
+pub enum AutoReviewRiskLevel {
     Low,
     Medium,
     High,
     Critical,
 }
 
-impl From<CoreGuardianRiskLevel> for GuardianRiskLevel {
-    fn from(value: CoreGuardianRiskLevel) -> Self {
+impl From<CoreAutoReviewRiskLevel> for AutoReviewRiskLevel {
+    fn from(value: CoreAutoReviewRiskLevel) -> Self {
         match value {
-            CoreGuardianRiskLevel::Low => Self::Low,
-            CoreGuardianRiskLevel::Medium => Self::Medium,
-            CoreGuardianRiskLevel::High => Self::High,
-            CoreGuardianRiskLevel::Critical => Self::Critical,
+            CoreAutoReviewRiskLevel::Low => Self::Low,
+            CoreAutoReviewRiskLevel::Medium => Self::Medium,
+            CoreAutoReviewRiskLevel::High => Self::High,
+            CoreAutoReviewRiskLevel::Critical => Self::Critical,
         }
     }
 }
@@ -451,35 +452,34 @@ impl From<CoreGuardianRiskLevel> for GuardianRiskLevel {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "lowercase")]
 #[ts(export_to = "v2/")]
-/// [UNSTABLE] Authorization level assigned by approval auto-review.
-pub enum GuardianUserAuthorization {
+/// Authorization level assigned by approval auto-review.
+pub enum AutoReviewUserAuthorization {
     Unknown,
     Low,
     Medium,
     High,
 }
 
-impl From<CoreGuardianUserAuthorization> for GuardianUserAuthorization {
-    fn from(value: CoreGuardianUserAuthorization) -> Self {
+impl From<CoreAutoReviewUserAuthorization> for AutoReviewUserAuthorization {
+    fn from(value: CoreAutoReviewUserAuthorization) -> Self {
         match value {
-            CoreGuardianUserAuthorization::Unknown => Self::Unknown,
-            CoreGuardianUserAuthorization::Low => Self::Low,
-            CoreGuardianUserAuthorization::Medium => Self::Medium,
-            CoreGuardianUserAuthorization::High => Self::High,
+            CoreAutoReviewUserAuthorization::Unknown => Self::Unknown,
+            CoreAutoReviewUserAuthorization::Low => Self::Low,
+            CoreAutoReviewUserAuthorization::Medium => Self::Medium,
+            CoreAutoReviewUserAuthorization::High => Self::High,
         }
     }
 }
 
-/// [UNSTABLE] Temporary approval auto-review payload used by
-/// `item/autoApprovalReview/*` notifications. This shape is expected to change
-/// soon.
+/// Approval auto-review payload used by `item/autoApprovalReview/*`
+/// notifications.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct GuardianApprovalReview {
-    pub status: GuardianApprovalReviewStatus,
-    pub risk_level: Option<GuardianRiskLevel>,
-    pub user_authorization: Option<GuardianUserAuthorization>,
+pub struct AutoApprovalReview {
+    pub status: AutoApprovalReviewStatus,
+    pub risk_level: Option<AutoReviewRiskLevel>,
+    pub user_authorization: Option<AutoReviewUserAuthorization>,
     pub rationale: Option<String>,
 }
 
@@ -487,25 +487,25 @@ pub struct GuardianApprovalReview {
 #[serde(rename_all = "camelCase")]
 #[ts(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub enum GuardianCommandSource {
+pub enum AutoReviewCommandSource {
     Shell,
     UnifiedExec,
 }
 
-impl From<CoreGuardianCommandSource> for GuardianCommandSource {
-    fn from(value: CoreGuardianCommandSource) -> Self {
+impl From<CoreAutoReviewCommandSource> for AutoReviewCommandSource {
+    fn from(value: CoreAutoReviewCommandSource) -> Self {
         match value {
-            CoreGuardianCommandSource::Shell => Self::Shell,
-            CoreGuardianCommandSource::UnifiedExec => Self::UnifiedExec,
+            CoreAutoReviewCommandSource::Shell => Self::Shell,
+            CoreAutoReviewCommandSource::UnifiedExec => Self::UnifiedExec,
         }
     }
 }
 
-impl From<GuardianCommandSource> for CoreGuardianCommandSource {
-    fn from(value: GuardianCommandSource) -> Self {
+impl From<AutoReviewCommandSource> for CoreAutoReviewCommandSource {
+    fn from(value: AutoReviewCommandSource) -> Self {
         match value {
-            GuardianCommandSource::Shell => Self::Shell,
-            GuardianCommandSource::UnifiedExec => Self::UnifiedExec,
+            AutoReviewCommandSource::Shell => Self::Shell,
+            AutoReviewCommandSource::UnifiedExec => Self::UnifiedExec,
         }
     }
 }
@@ -513,8 +513,8 @@ impl From<GuardianCommandSource> for CoreGuardianCommandSource {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct GuardianCommandReviewAction {
-    pub source: GuardianCommandSource,
+pub struct AutoReviewCommandReviewAction {
+    pub source: AutoReviewCommandSource,
     pub command: String,
     pub cwd: AbsolutePathBuf,
 }
@@ -522,8 +522,8 @@ pub struct GuardianCommandReviewAction {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct GuardianExecveReviewAction {
-    pub source: GuardianCommandSource,
+pub struct AutoReviewExecveReviewAction {
+    pub source: AutoReviewCommandSource,
     pub program: String,
     pub argv: Vec<String>,
     pub cwd: AbsolutePathBuf,
@@ -532,7 +532,7 @@ pub struct GuardianExecveReviewAction {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct GuardianApplyPatchReviewAction {
+pub struct AutoReviewApplyPatchReviewAction {
     pub cwd: AbsolutePathBuf,
     pub files: Vec<AbsolutePathBuf>,
 }
@@ -540,7 +540,7 @@ pub struct GuardianApplyPatchReviewAction {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct GuardianNetworkAccessReviewAction {
+pub struct AutoReviewNetworkAccessReviewAction {
     pub target: String,
     pub host: String,
     pub protocol: NetworkApprovalProtocol,
@@ -550,7 +550,7 @@ pub struct GuardianNetworkAccessReviewAction {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct GuardianMcpToolCallReviewAction {
+pub struct AutoReviewMcpToolCallReviewAction {
     pub server: String,
     pub tool_name: String,
     pub integration_id: Option<String>,
@@ -561,7 +561,7 @@ pub struct GuardianMcpToolCallReviewAction {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct GuardianRequestPermissionsReviewAction {
+pub struct AutoReviewRequestPermissionsReviewAction {
     pub reason: Option<String>,
     pub permissions: RequestPermissionProfile,
 }
@@ -570,18 +570,18 @@ pub struct GuardianRequestPermissionsReviewAction {
 #[serde(tag = "type", rename_all = "camelCase")]
 #[ts(tag = "type", rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub enum GuardianApprovalReviewAction {
+pub enum AutoApprovalReviewAction {
     #[serde(rename_all = "camelCase")]
     #[ts(rename_all = "camelCase")]
     Command {
-        source: GuardianCommandSource,
+        source: AutoReviewCommandSource,
         command: String,
         cwd: AbsolutePathBuf,
     },
     #[serde(rename_all = "camelCase")]
     #[ts(rename_all = "camelCase")]
     Execve {
-        source: GuardianCommandSource,
+        source: AutoReviewCommandSource,
         program: String,
         argv: Vec<String>,
         cwd: AbsolutePathBuf,
@@ -617,10 +617,10 @@ pub enum GuardianApprovalReviewAction {
     },
 }
 
-impl From<CoreGuardianAssessmentAction> for GuardianApprovalReviewAction {
-    fn from(value: CoreGuardianAssessmentAction) -> Self {
+impl From<CoreAutoReviewAssessmentAction> for AutoApprovalReviewAction {
+    fn from(value: CoreAutoReviewAssessmentAction) -> Self {
         match value {
-            CoreGuardianAssessmentAction::Command {
+            CoreAutoReviewAssessmentAction::Command {
                 source,
                 command,
                 cwd,
@@ -629,7 +629,7 @@ impl From<CoreGuardianAssessmentAction> for GuardianApprovalReviewAction {
                 command,
                 cwd,
             },
-            CoreGuardianAssessmentAction::Execve {
+            CoreAutoReviewAssessmentAction::Execve {
                 source,
                 program,
                 argv,
@@ -640,10 +640,10 @@ impl From<CoreGuardianAssessmentAction> for GuardianApprovalReviewAction {
                 argv,
                 cwd,
             },
-            CoreGuardianAssessmentAction::ApplyPatch { cwd, files } => {
+            CoreAutoReviewAssessmentAction::ApplyPatch { cwd, files } => {
                 Self::ApplyPatch { cwd, files }
             }
-            CoreGuardianAssessmentAction::NetworkAccess {
+            CoreAutoReviewAssessmentAction::NetworkAccess {
                 target,
                 host,
                 protocol,
@@ -654,7 +654,7 @@ impl From<CoreGuardianAssessmentAction> for GuardianApprovalReviewAction {
                 protocol: protocol.into(),
                 port,
             },
-            CoreGuardianAssessmentAction::McpToolCall {
+            CoreAutoReviewAssessmentAction::McpToolCall {
                 server,
                 tool_name,
                 integration_id,
@@ -667,7 +667,7 @@ impl From<CoreGuardianAssessmentAction> for GuardianApprovalReviewAction {
                 integration_name,
                 tool_title,
             },
-            CoreGuardianAssessmentAction::RequestPermissions {
+            CoreAutoReviewAssessmentAction::RequestPermissions {
                 reason,
                 permissions,
             } => Self::RequestPermissions {
@@ -678,10 +678,10 @@ impl From<CoreGuardianAssessmentAction> for GuardianApprovalReviewAction {
     }
 }
 
-impl From<GuardianApprovalReviewAction> for CoreGuardianAssessmentAction {
-    fn from(value: GuardianApprovalReviewAction) -> Self {
+impl From<AutoApprovalReviewAction> for CoreAutoReviewAssessmentAction {
+    fn from(value: AutoApprovalReviewAction) -> Self {
         match value {
-            GuardianApprovalReviewAction::Command {
+            AutoApprovalReviewAction::Command {
                 source,
                 command,
                 cwd,
@@ -690,7 +690,7 @@ impl From<GuardianApprovalReviewAction> for CoreGuardianAssessmentAction {
                 command,
                 cwd,
             },
-            GuardianApprovalReviewAction::Execve {
+            AutoApprovalReviewAction::Execve {
                 source,
                 program,
                 argv,
@@ -701,10 +701,10 @@ impl From<GuardianApprovalReviewAction> for CoreGuardianAssessmentAction {
                 argv,
                 cwd,
             },
-            GuardianApprovalReviewAction::ApplyPatch { cwd, files } => {
+            AutoApprovalReviewAction::ApplyPatch { cwd, files } => {
                 Self::ApplyPatch { cwd, files }
             }
-            GuardianApprovalReviewAction::NetworkAccess {
+            AutoApprovalReviewAction::NetworkAccess {
                 target,
                 host,
                 protocol,
@@ -715,7 +715,7 @@ impl From<GuardianApprovalReviewAction> for CoreGuardianAssessmentAction {
                 protocol: protocol.to_core(),
                 port,
             },
-            GuardianApprovalReviewAction::McpToolCall {
+            AutoApprovalReviewAction::McpToolCall {
                 server,
                 tool_name,
                 integration_id,
@@ -728,7 +728,7 @@ impl From<GuardianApprovalReviewAction> for CoreGuardianAssessmentAction {
                 integration_name,
                 tool_title,
             },
-            GuardianApprovalReviewAction::RequestPermissions {
+            AutoApprovalReviewAction::RequestPermissions {
                 reason,
                 permissions,
             } => Self::RequestPermissions {
@@ -778,20 +778,34 @@ impl From<runtime_protocol::models::WebSearchAction> for WebSearchAction {
 
 impl From<CoreTurnItem> for ThreadItem {
     fn from(value: CoreTurnItem) -> Self {
+        ThreadItem::try_from_core(value).unwrap_or_else(|_| ThreadItem::UserMessage {
+            id: String::new(),
+            client_id: None,
+            content: Vec::new(),
+        })
+    }
+}
+
+impl ThreadItem {
+    pub fn try_from_core(value: CoreTurnItem) -> Result<Self, UnsupportedUserInputVariant> {
         match value {
-            CoreTurnItem::UserMessage(user) => ThreadItem::UserMessage {
+            CoreTurnItem::UserMessage(user) => Ok(ThreadItem::UserMessage {
                 id: user.id,
                 client_id: user.client_id,
-                content: user.content.into_iter().map(UserInput::from).collect(),
-            },
-            CoreTurnItem::HookPrompt(hook_prompt) => ThreadItem::HookPrompt {
+                content: user
+                    .content
+                    .into_iter()
+                    .map(UserInput::from_core)
+                    .collect::<Result<Vec<_>, _>>()?,
+            }),
+            CoreTurnItem::HookPrompt(hook_prompt) => Ok(ThreadItem::HookPrompt {
                 id: hook_prompt.id,
                 fragments: hook_prompt
                     .fragments
                     .into_iter()
                     .map(HookPromptFragment::from)
                     .collect(),
-            },
+            }),
             CoreTurnItem::AgentMessage(agent) => {
                 let text = agent
                     .content
@@ -800,39 +814,39 @@ impl From<CoreTurnItem> for ThreadItem {
                         CoreAgentMessageContent::Text { text } => text,
                     })
                     .collect::<String>();
-                ThreadItem::AgentMessage {
+                Ok(ThreadItem::AgentMessage {
                     id: agent.id,
                     text,
                     phase: agent.phase,
                     memory_citation: agent.memory_citation.map(Into::into),
-                }
+                })
             }
-            CoreTurnItem::Plan(plan) => ThreadItem::Plan {
+            CoreTurnItem::Plan(plan) => Ok(ThreadItem::Plan {
                 id: plan.id,
                 text: plan.text,
-            },
-            CoreTurnItem::Reasoning(reasoning) => ThreadItem::Reasoning {
+            }),
+            CoreTurnItem::Reasoning(reasoning) => Ok(ThreadItem::Reasoning {
                 id: reasoning.id,
                 summary: reasoning.summary_text,
                 content: reasoning.raw_content,
-            },
-            CoreTurnItem::WebSearch(search) => ThreadItem::WebSearch {
+            }),
+            CoreTurnItem::WebSearch(search) => Ok(ThreadItem::WebSearch {
                 id: search.id,
                 query: search.query,
                 action: Some(WebSearchAction::from(search.action)),
-            },
-            CoreTurnItem::ImageView(image) => ThreadItem::ImageView {
+            }),
+            CoreTurnItem::ImageView(image) => Ok(ThreadItem::ImageView {
                 id: image.id,
                 path: image.path,
-            },
-            CoreTurnItem::ImageGeneration(image) => ThreadItem::ImageGeneration {
+            }),
+            CoreTurnItem::ImageGeneration(image) => Ok(ThreadItem::ImageGeneration {
                 id: image.id,
                 status: image.status,
                 revised_prompt: image.revised_prompt,
                 result: image.result,
                 saved_path: image.saved_path,
-            },
-            CoreTurnItem::FileChange(file_change) => ThreadItem::FileChange {
+            }),
+            CoreTurnItem::FileChange(file_change) => Ok(ThreadItem::FileChange {
                 id: file_change.id,
                 changes: convert_patch_changes(&file_change.changes),
                 status: file_change
@@ -840,13 +854,13 @@ impl From<CoreTurnItem> for ThreadItem {
                     .as_ref()
                     .map(PatchApplyStatus::from)
                     .unwrap_or(PatchApplyStatus::InProgress),
-            },
+            }),
             CoreTurnItem::McpToolCall(mcp) => {
                 let duration_ms = mcp
                     .duration
                     .and_then(|duration| i64::try_from(duration.as_millis()).ok());
 
-                ThreadItem::McpToolCall {
+                Ok(ThreadItem::McpToolCall {
                     id: mcp.id,
                     server: mcp.server,
                     tool: mcp.tool,
@@ -857,10 +871,10 @@ impl From<CoreTurnItem> for ThreadItem {
                     result: mcp.result.map(McpToolCallResult::from).map(Box::new),
                     error: mcp.error.map(McpToolCallError::from),
                     duration_ms,
-                }
+                })
             }
             CoreTurnItem::ContextCompaction(compaction) => {
-                ThreadItem::ContextCompaction { id: compaction.id }
+                Ok(ThreadItem::ContextCompaction { id: compaction.id })
             }
         }
     }
@@ -1076,9 +1090,8 @@ pub struct ItemStartedNotification {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-/// [UNSTABLE] Temporary notification payload for approval auto-review. This
-/// shape is expected to change soon.
-pub struct ItemGuardianApprovalReviewStartedNotification {
+/// Notification payload emitted when an approval auto-review starts.
+pub struct ItemAutoApprovalReviewStartedNotification {
     pub thread_id: String,
     pub turn_id: String,
     /// Unix timestamp (in milliseconds) when this review started.
@@ -1098,16 +1111,16 @@ pub struct ItemGuardianApprovalReviewStartedNotification {
     /// because the review is about the network call, not the command execution.
     /// Therefore, target_item_id is set to None for network policy reviews.
     pub target_item_id: Option<String>,
-    pub review: GuardianApprovalReview,
-    pub action: GuardianApprovalReviewAction,
+    pub review: AutoApprovalReview,
+    pub action: AutoApprovalReviewAction,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-/// [UNSTABLE] Temporary notification payload for approval auto-review. This
-/// shape is expected to change soon.
-pub struct ItemGuardianApprovalReviewCompletedNotification {
+/// Notification payload emitted when an approval auto-review reaches a terminal
+/// state.
+pub struct ItemAutoApprovalReviewCompletedNotification {
     pub thread_id: String,
     pub turn_id: String,
     /// Unix timestamp (in milliseconds) when this review started.
@@ -1131,8 +1144,8 @@ pub struct ItemGuardianApprovalReviewCompletedNotification {
     /// Therefore, target_item_id is set to None for network policy reviews.
     pub target_item_id: Option<String>,
     pub decision_source: AutoReviewDecisionSource,
-    pub review: GuardianApprovalReview,
-    pub action: GuardianApprovalReviewAction,
+    pub review: AutoApprovalReview,
+    pub action: AutoApprovalReviewAction,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]

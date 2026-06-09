@@ -15,10 +15,10 @@ use crate::protocol::v2::CommandAction;
 use crate::protocol::v2::CommandExecutionSource;
 use crate::protocol::v2::CommandExecutionStatus;
 use crate::protocol::v2::FileUpdateChange;
-use crate::protocol::v2::GuardianApprovalReview;
-use crate::protocol::v2::GuardianApprovalReviewStatus;
-use crate::protocol::v2::ItemGuardianApprovalReviewCompletedNotification;
-use crate::protocol::v2::ItemGuardianApprovalReviewStartedNotification;
+use crate::protocol::v2::AutoApprovalReview;
+use crate::protocol::v2::AutoApprovalReviewStatus;
+use crate::protocol::v2::ItemAutoApprovalReviewCompletedNotification;
+use crate::protocol::v2::ItemAutoApprovalReviewStartedNotification;
 use crate::protocol::v2::PatchApplyStatus;
 use crate::protocol::v2::PatchChangeKind;
 use crate::protocol::v2::ThreadItem;
@@ -30,8 +30,8 @@ use runtime_protocol::protocol::ExecApprovalRequestEvent;
 use runtime_protocol::protocol::ExecCommandBeginEvent;
 use runtime_protocol::protocol::ExecCommandEndEvent;
 use runtime_protocol::protocol::FileChange;
-use runtime_protocol::protocol::GuardianAssessmentAction;
-use runtime_protocol::protocol::GuardianAssessmentEvent;
+use runtime_protocol::protocol::AutoReviewAssessmentAction;
+use runtime_protocol::protocol::AutoReviewAssessmentEvent;
 use runtime_protocol::protocol::PatchApplyBeginEvent;
 use runtime_protocol::protocol::PatchApplyEndEvent;
 use std::collections::HashMap;
@@ -132,16 +132,16 @@ pub fn build_command_execution_end_item(payload: &ExecCommandEndEvent) -> Thread
     }
 }
 
-/// Build a guardian-derived [`ThreadItem`].
+/// Build a auto-review-derived [`ThreadItem`].
 ///
 /// Currently this only synthesizes [`ThreadItem::CommandExecution`] for
-/// [`GuardianAssessmentAction::Command`] and [`GuardianAssessmentAction::Execve`].
-pub fn build_item_from_guardian_event(
-    assessment: &GuardianAssessmentEvent,
+/// [`AutoReviewAssessmentAction::Command`] and [`AutoReviewAssessmentAction::Execve`].
+pub fn build_item_from_auto_review_event(
+    assessment: &AutoReviewAssessmentEvent,
     status: CommandExecutionStatus,
 ) -> Option<ThreadItem> {
     match &assessment.action {
-        GuardianAssessmentAction::Command { command, cwd, .. } => {
+        AutoReviewAssessmentAction::Command { command, cwd, .. } => {
             let id = assessment.target_item_id.as_ref()?;
             let command = command.clone();
             let command_actions = vec![CommandAction::Unknown {
@@ -160,7 +160,7 @@ pub fn build_item_from_guardian_event(
                 duration_ms: None,
             })
         }
-        GuardianAssessmentAction::Execve {
+        AutoReviewAssessmentAction::Execve {
             program, argv, cwd, ..
         } => {
             let id = assessment.target_item_id.as_ref()?;
@@ -196,39 +196,39 @@ pub fn build_item_from_guardian_event(
                 duration_ms: None,
             })
         }
-        GuardianAssessmentAction::ApplyPatch { .. }
-        | GuardianAssessmentAction::NetworkAccess { .. }
-        | GuardianAssessmentAction::McpToolCall { .. }
-        | GuardianAssessmentAction::RequestPermissions { .. } => None,
+        AutoReviewAssessmentAction::ApplyPatch { .. }
+        | AutoReviewAssessmentAction::NetworkAccess { .. }
+        | AutoReviewAssessmentAction::McpToolCall { .. }
+        | AutoReviewAssessmentAction::RequestPermissions { .. } => None,
     }
 }
 
-pub fn guardian_auto_approval_review_notification(
+pub fn auto_approval_review_notification(
     conversation_id: &ThreadId,
     event_turn_id: &str,
-    assessment: &GuardianAssessmentEvent,
+    assessment: &AutoReviewAssessmentEvent,
 ) -> ServerNotification {
     let turn_id = if assessment.turn_id.is_empty() {
         event_turn_id.to_string()
     } else {
         assessment.turn_id.clone()
     };
-    let review = GuardianApprovalReview {
+    let review = AutoApprovalReview {
         status: match assessment.status {
-            runtime_protocol::protocol::GuardianAssessmentStatus::InProgress => {
-                GuardianApprovalReviewStatus::InProgress
+            runtime_protocol::protocol::AutoReviewAssessmentStatus::InProgress => {
+                AutoApprovalReviewStatus::InProgress
             }
-            runtime_protocol::protocol::GuardianAssessmentStatus::Approved => {
-                GuardianApprovalReviewStatus::Approved
+            runtime_protocol::protocol::AutoReviewAssessmentStatus::Approved => {
+                AutoApprovalReviewStatus::Approved
             }
-            runtime_protocol::protocol::GuardianAssessmentStatus::Denied => {
-                GuardianApprovalReviewStatus::Denied
+            runtime_protocol::protocol::AutoReviewAssessmentStatus::Denied => {
+                AutoApprovalReviewStatus::Denied
             }
-            runtime_protocol::protocol::GuardianAssessmentStatus::TimedOut => {
-                GuardianApprovalReviewStatus::TimedOut
+            runtime_protocol::protocol::AutoReviewAssessmentStatus::TimedOut => {
+                AutoApprovalReviewStatus::TimedOut
             }
-            runtime_protocol::protocol::GuardianAssessmentStatus::Aborted => {
-                GuardianApprovalReviewStatus::Aborted
+            runtime_protocol::protocol::AutoReviewAssessmentStatus::Aborted => {
+                AutoApprovalReviewStatus::Aborted
             }
         },
         risk_level: assessment.risk_level.map(Into::into),
@@ -237,9 +237,9 @@ pub fn guardian_auto_approval_review_notification(
     };
     let action = assessment.action.clone().into();
     match assessment.status {
-        runtime_protocol::protocol::GuardianAssessmentStatus::InProgress => {
-            ServerNotification::ItemGuardianApprovalReviewStarted(
-                ItemGuardianApprovalReviewStartedNotification {
+        runtime_protocol::protocol::AutoReviewAssessmentStatus::InProgress => {
+            ServerNotification::ItemAutoApprovalReviewStarted(
+                ItemAutoApprovalReviewStartedNotification {
                     thread_id: conversation_id.to_string(),
                     turn_id,
                     review_id: assessment.id.clone(),
@@ -250,12 +250,12 @@ pub fn guardian_auto_approval_review_notification(
                 },
             )
         }
-        runtime_protocol::protocol::GuardianAssessmentStatus::Approved
-        | runtime_protocol::protocol::GuardianAssessmentStatus::Denied
-        | runtime_protocol::protocol::GuardianAssessmentStatus::TimedOut
-        | runtime_protocol::protocol::GuardianAssessmentStatus::Aborted => {
-            ServerNotification::ItemGuardianApprovalReviewCompleted(
-                ItemGuardianApprovalReviewCompletedNotification {
+        runtime_protocol::protocol::AutoReviewAssessmentStatus::Approved
+        | runtime_protocol::protocol::AutoReviewAssessmentStatus::Denied
+        | runtime_protocol::protocol::AutoReviewAssessmentStatus::TimedOut
+        | runtime_protocol::protocol::AutoReviewAssessmentStatus::Aborted => {
+            ServerNotification::ItemAutoApprovalReviewCompleted(
+                ItemAutoApprovalReviewCompletedNotification {
                     thread_id: conversation_id.to_string(),
                     turn_id,
                     review_id: assessment.id.clone(),

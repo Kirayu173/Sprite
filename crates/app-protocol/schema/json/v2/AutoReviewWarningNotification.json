@@ -2,11 +2,11 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "properties": {
     "message": {
-      "description": "Concise guardian warning message for the user.",
+      "description": "Concise auto-review warning message for the user.",
       "type": "string"
     },
     "threadId": {
-      "description": "Thread target for the guardian warning.",
+      "description": "Thread target for the auto-review warning.",
       "type": "string"
     }
   },
@@ -14,6 +14,6 @@
     "message",
     "threadId"
   ],
-  "title": "GuardianWarningNotification",
+  "title": "AutoReviewWarningNotification",
   "type": "object"
 }

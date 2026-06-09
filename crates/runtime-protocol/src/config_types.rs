@@ -154,9 +154,9 @@ impl fmt::Display for ProfileV2Name {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Display, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Display, TS)]
 #[strum(serialize_all = "snake_case")]
-#[ts(type = r#""user" | "auto_review" | "guardian_subagent""#)]
+#[ts(type = r#""user" | "auto_review""#)]
 /// Configures who approval requests are routed to for review. Examples
 /// include sandbox escapes, blocked network access, MCP approval prompts, and
 /// ARC escalations. Defaults to `user`. `auto_review` uses a carefully
@@ -166,9 +166,26 @@ pub enum ApprovalsReviewer {
     #[default]
     #[serde(rename = "user")]
     User,
-    #[serde(rename = "guardian_subagent", alias = "auto_review")]
-    #[strum(serialize = "guardian_subagent")]
+    #[serde(rename = "auto_review")]
+    #[strum(serialize = "auto_review")]
     AutoReview,
+}
+
+impl<'de> Deserialize<'de> for ApprovalsReviewer {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        match value.as_str() {
+            "user" => Ok(Self::User),
+            "auto_review" | "guardian_subagent" => Ok(Self::AutoReview),
+            _ => Err(serde::de::Error::unknown_variant(
+                &value,
+                &["user", "auto_review"],
+            )),
+        }
+    }
 }
 
 impl JsonSchema for ApprovalsReviewer {
@@ -178,7 +195,7 @@ impl JsonSchema for ApprovalsReviewer {
 
     fn json_schema(_generator: &mut SchemaGenerator) -> Schema {
         string_enum_schema_with_description(
-            &["user", "auto_review", "guardian_subagent"],
+            &["user", "auto_review"],
             "Configures who approval requests are routed to for review. Examples include sandbox escapes, blocked network access, MCP approval prompts, and ARC escalations. Defaults to `user`. `auto_review` uses a carefully prompted subagent to gather relevant context and apply a risk-based decision framework before approving or denying the request. The legacy value `guardian_subagent` is accepted for compatibility.",
         )
     }
@@ -752,7 +769,7 @@ mod tests {
         );
         assert_eq!(
             serde_json::to_string(&ApprovalsReviewer::AutoReview).expect("serialize reviewer"),
-            "\"guardian_subagent\""
+            "\"auto_review\""
         );
 
         for value in ["user", "auto_review", "guardian_subagent"] {

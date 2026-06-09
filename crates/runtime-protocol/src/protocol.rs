@@ -65,14 +65,14 @@ pub use crate::approvals::ApplyPatchApprovalRequestEvent;
 pub use crate::approvals::ElicitationAction;
 pub use crate::approvals::ExecApprovalRequestEvent;
 pub use crate::approvals::ExecPolicyAmendment;
-pub use crate::approvals::GuardianAssessmentAction;
-pub use crate::approvals::GuardianAssessmentDecisionSource;
-pub use crate::approvals::GuardianAssessmentEvent;
-pub use crate::approvals::GuardianAssessmentOutcome;
-pub use crate::approvals::GuardianAssessmentStatus;
-pub use crate::approvals::GuardianCommandSource;
-pub use crate::approvals::GuardianRiskLevel;
-pub use crate::approvals::GuardianUserAuthorization;
+pub use crate::approvals::AutoReviewAssessmentAction;
+pub use crate::approvals::AutoReviewAssessmentDecisionSource;
+pub use crate::approvals::AutoReviewAssessmentEvent;
+pub use crate::approvals::AutoReviewAssessmentOutcome;
+pub use crate::approvals::AutoReviewAssessmentStatus;
+pub use crate::approvals::AutoReviewCommandSource;
+pub use crate::approvals::AutoReviewRiskLevel;
+pub use crate::approvals::AutoReviewUserAuthorization;
 pub use crate::approvals::NetworkApprovalContext;
 pub use crate::approvals::NetworkApprovalProtocol;
 pub use crate::approvals::NetworkPolicyAmendment;
@@ -357,8 +357,8 @@ pub enum Op {
     /// Request a code review from the agent.
     Review { review_request: ReviewRequest },
 
-    /// Record that the user approved one retry of a concrete Guardian-denied action.
-    ApproveGuardianDeniedAction { event: GuardianAssessmentEvent },
+    /// Record that the user approved one retry of a concrete auto-review-denied action.
+    ApproveAutoReviewDeniedAction { event: AutoReviewAssessmentEvent },
 
     /// Request to shut down the runtime instance.
     Shutdown,
@@ -499,7 +499,7 @@ impl Op {
             Self::SetThreadMemoryMode { .. } => "set_thread_memory_mode",
             Self::ThreadRollback { .. } => "thread_rollback",
             Self::Review { .. } => "review",
-            Self::ApproveGuardianDeniedAction { .. } => "approve_guardian_denied_action",
+            Self::ApproveAutoReviewDeniedAction { .. } => "approve_auto_review_denied_action",
             Self::Shutdown => "shutdown",
             Self::RunUserShellCommand { .. } => "run_user_shell_command",
         }
@@ -906,8 +906,8 @@ pub enum EventMsg {
     /// indicates the turn continued but the user should still be notified.
     Warning(WarningEvent),
 
-    /// Warning issued by the guardian automatic approval reviewer.
-    GuardianWarning(WarningEvent),
+    /// Warning issued by the automatic approval reviewer.
+    AutoReviewWarning(WarningEvent),
 
     /// Model routing changed from the requested model to a different model.
     ModelReroute(ModelRerouteEvent),
@@ -1017,8 +1017,8 @@ pub enum EventMsg {
 
     ApplyPatchApprovalRequest(ApplyPatchApprovalRequestEvent),
 
-    /// Structured lifecycle event for a guardian-reviewed approval request.
-    GuardianAssessment(GuardianAssessmentEvent),
+    /// Structured lifecycle event for an auto-reviewed approval request.
+    AutoReviewAssessment(AutoReviewAssessmentEvent),
 
     /// Notification advising the user that something they are using has been
     /// deprecated and should be phased out.

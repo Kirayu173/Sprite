@@ -28,10 +28,10 @@ pub struct WarningNotification {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct GuardianWarningNotification {
-    /// Thread target for the guardian warning.
+pub struct AutoReviewWarningNotification {
+    /// Thread target for the auto-review warning.
     pub thread_id: String,
-    /// Concise guardian warning message for the user.
+    /// Concise auto-review warning message for the user.
     pub message: String,
 }
 

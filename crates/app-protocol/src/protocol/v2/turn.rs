@@ -317,29 +317,40 @@ impl UserInput {
             UserInput::Mention { name, path } => CoreUserInput::Mention { name, path },
         }
     }
-}
 
-impl From<CoreUserInput> for UserInput {
-    fn from(value: CoreUserInput) -> Self {
+    pub fn from_core(value: CoreUserInput) -> Result<Self, UnsupportedUserInputVariant> {
         match value {
             CoreUserInput::Text {
                 text,
                 text_elements,
-            } => UserInput::Text {
+            } => Ok(UserInput::Text {
                 text,
                 text_elements: text_elements.into_iter().map(Into::into).collect(),
-            },
-            CoreUserInput::Image { image_url, detail } => UserInput::Image {
+            }),
+            CoreUserInput::Image { image_url, detail } => Ok(UserInput::Image {
                 url: image_url,
                 detail,
-            },
-            CoreUserInput::LocalImage { path, detail } => UserInput::LocalImage { path, detail },
-            CoreUserInput::Skill { name, path } => UserInput::Skill { name, path },
-            CoreUserInput::Mention { name, path } => UserInput::Mention { name, path },
-            _ => unreachable!("unsupported user input variant"),
+            }),
+            CoreUserInput::LocalImage { path, detail } => {
+                Ok(UserInput::LocalImage { path, detail })
+            }
+            CoreUserInput::Skill { name, path } => Ok(UserInput::Skill { name, path }),
+            CoreUserInput::Mention { name, path } => Ok(UserInput::Mention { name, path }),
+            _ => Err(UnsupportedUserInputVariant),
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UnsupportedUserInputVariant;
+
+impl std::fmt::Display for UnsupportedUserInputVariant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("unsupported user input variant")
+    }
+}
+
+impl std::error::Error for UnsupportedUserInputVariant {}
 
 impl UserInput {
     pub fn text_char_count(&self) -> usize {

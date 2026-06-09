@@ -519,10 +519,10 @@ client_request_definitions! {
         serialization: thread_id(params.thread_id),
         response: v2::ThreadShellCommandResponse,
     },
-    ThreadApproveGuardianDeniedAction => "thread/approveGuardianDeniedAction" {
-        params: v2::ThreadApproveGuardianDeniedActionParams,
+    ThreadApproveAutoReviewDeniedAction => "thread/approveAutoReviewDeniedAction" {
+        params: v2::ThreadApproveAutoReviewDeniedActionParams,
         serialization: thread_id(params.thread_id),
-        response: v2::ThreadApproveGuardianDeniedActionResponse,
+        response: v2::ThreadApproveAutoReviewDeniedActionResponse,
     },
     #[experimental("thread/backgroundTerminals/clean")]
     ThreadBackgroundTerminalsClean => "thread/backgroundTerminals/clean" {
@@ -1300,8 +1300,8 @@ server_notification_definitions! {
     TurnDiffUpdated => "turn/diff/updated" (v2::TurnDiffUpdatedNotification),
     TurnPlanUpdated => "turn/plan/updated" (v2::TurnPlanUpdatedNotification),
     ItemStarted => "item/started" (v2::ItemStartedNotification),
-    ItemGuardianApprovalReviewStarted => "item/autoApprovalReview/started" (v2::ItemGuardianApprovalReviewStartedNotification),
-    ItemGuardianApprovalReviewCompleted => "item/autoApprovalReview/completed" (v2::ItemGuardianApprovalReviewCompletedNotification),
+    ItemAutoApprovalReviewStarted => "item/autoApprovalReview/started" (v2::ItemAutoApprovalReviewStartedNotification),
+    ItemAutoApprovalReviewCompleted => "item/autoApprovalReview/completed" (v2::ItemAutoApprovalReviewCompletedNotification),
     ItemCompleted => "item/completed" (v2::ItemCompletedNotification),
     /// This event is internal-only and reserved for runtime-owned raw response replay.
     RawResponseItemCompleted => "rawResponseItem/completed" (v2::RawResponseItemCompletedNotification),
@@ -1336,7 +1336,7 @@ server_notification_definitions! {
     #[experimental("provider/policyMetadata")]
     ProviderPolicyMetadata => "provider/policyMetadata" (v2::ProviderPolicyMetadataNotification),
     Warning => "warning" (v2::WarningNotification),
-    GuardianWarning => "guardianWarning" (v2::GuardianWarningNotification),
+    AutoReviewWarning => "autoReviewWarning" (v2::AutoReviewWarningNotification),
     DeprecationNotice => "deprecationNotice" (v2::DeprecationNoticeNotification),
     ConfigWarning => "configWarning" (v2::ConfigWarningNotification),
     FuzzyFileSearchSessionUpdated => "fuzzyFileSearch/sessionUpdated" (FuzzyFileSearchSessionUpdatedNotification),
@@ -1593,17 +1593,17 @@ mod tests {
             })
         );
 
-        let guardian_approval = ClientRequest::ThreadApproveGuardianDeniedAction {
+        let auto_review_approval = ClientRequest::ThreadApproveAutoReviewDeniedAction {
             request_id: request_id(),
-            params: v2::ThreadApproveGuardianDeniedActionParams {
-                thread_id: "guardian-thread".to_string(),
-                event: json!({ "type": "guardian" }),
+            params: v2::ThreadApproveAutoReviewDeniedActionParams {
+                thread_id: "auto-review-thread".to_string(),
+                event: json!({ "type": "auto-review" }),
             },
         };
         assert_eq!(
-            guardian_approval.serialization_scope(),
+            auto_review_approval.serialization_scope(),
             Some(ClientRequestSerializationScope::Thread {
-                thread_id: "guardian-thread".to_string()
+                thread_id: "auto-review-thread".to_string()
             })
         );
 

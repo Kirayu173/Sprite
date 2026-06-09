@@ -58,6 +58,278 @@
       },
       "type": "object"
     },
+    "AutoApprovalReview": {
+      "description": "Approval auto-review payload used by `item/autoApprovalReview/*` notifications.",
+      "properties": {
+        "rationale": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "riskLevel": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AutoReviewRiskLevel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/AutoApprovalReviewStatus"
+        },
+        "userAuthorization": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AutoReviewUserAuthorization"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "type": "object"
+    },
+    "AutoApprovalReviewAction": {
+      "oneOf": [
+        {
+          "properties": {
+            "command": {
+              "type": "string"
+            },
+            "cwd": {
+              "$ref": "#/definitions/AbsolutePathBuf"
+            },
+            "source": {
+              "$ref": "#/definitions/AutoReviewCommandSource"
+            },
+            "type": {
+              "enum": [
+                "command"
+              ],
+              "title": "CommandAutoApprovalReviewActionType",
+              "type": "string"
+            }
+          },
+          "required": [
+            "command",
+            "cwd",
+            "source",
+            "type"
+          ],
+          "title": "CommandAutoApprovalReviewAction",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "argv": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "cwd": {
+              "$ref": "#/definitions/AbsolutePathBuf"
+            },
+            "program": {
+              "type": "string"
+            },
+            "source": {
+              "$ref": "#/definitions/AutoReviewCommandSource"
+            },
+            "type": {
+              "enum": [
+                "execve"
+              ],
+              "title": "ExecveAutoApprovalReviewActionType",
+              "type": "string"
+            }
+          },
+          "required": [
+            "argv",
+            "cwd",
+            "program",
+            "source",
+            "type"
+          ],
+          "title": "ExecveAutoApprovalReviewAction",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "cwd": {
+              "$ref": "#/definitions/AbsolutePathBuf"
+            },
+            "files": {
+              "items": {
+                "$ref": "#/definitions/AbsolutePathBuf"
+              },
+              "type": "array"
+            },
+            "type": {
+              "enum": [
+                "applyPatch"
+              ],
+              "title": "ApplyPatchAutoApprovalReviewActionType",
+              "type": "string"
+            }
+          },
+          "required": [
+            "cwd",
+            "files",
+            "type"
+          ],
+          "title": "ApplyPatchAutoApprovalReviewAction",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "format": "uint16",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "protocol": {
+              "$ref": "#/definitions/NetworkApprovalProtocol"
+            },
+            "target": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "networkAccess"
+              ],
+              "title": "NetworkAccessAutoApprovalReviewActionType",
+              "type": "string"
+            }
+          },
+          "required": [
+            "host",
+            "port",
+            "protocol",
+            "target",
+            "type"
+          ],
+          "title": "NetworkAccessAutoApprovalReviewAction",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "integrationId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "integrationName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "server": {
+              "type": "string"
+            },
+            "toolName": {
+              "type": "string"
+            },
+            "toolTitle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "enum": [
+                "mcpToolCall"
+              ],
+              "title": "McpToolCallAutoApprovalReviewActionType",
+              "type": "string"
+            }
+          },
+          "required": [
+            "server",
+            "toolName",
+            "type"
+          ],
+          "title": "McpToolCallAutoApprovalReviewAction",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "permissions": {
+              "$ref": "#/definitions/RequestPermissionProfile"
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "enum": [
+                "requestPermissions"
+              ],
+              "title": "RequestPermissionsAutoApprovalReviewActionType",
+              "type": "string"
+            }
+          },
+          "required": [
+            "permissions",
+            "type"
+          ],
+          "title": "RequestPermissionsAutoApprovalReviewAction",
+          "type": "object"
+        }
+      ]
+    },
+    "AutoApprovalReviewStatus": {
+      "description": "Lifecycle state for an approval auto-review.",
+      "enum": [
+        "inProgress",
+        "approved",
+        "denied",
+        "timedOut",
+        "aborted"
+      ],
+      "type": "string"
+    },
+    "AutoReviewCommandSource": {
+      "enum": [
+        "shell",
+        "unifiedExec"
+      ],
+      "type": "string"
+    },
+    "AutoReviewRiskLevel": {
+      "description": "Risk level assigned by approval auto-review.",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "type": "string"
+    },
+    "AutoReviewUserAuthorization": {
+      "description": "Authorization level assigned by approval auto-review.",
+      "enum": [
+        "unknown",
+        "low",
+        "medium",
+        "high"
+      ],
+      "type": "string"
+    },
     "FileSystemAccessMode": {
       "enum": [
         "read",
@@ -254,278 +526,6 @@
         }
       ]
     },
-    "GuardianApprovalReview": {
-      "description": "[UNSTABLE] Temporary approval auto-review payload used by `item/autoApprovalReview/*` notifications. This shape is expected to change soon.",
-      "properties": {
-        "rationale": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "riskLevel": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/GuardianRiskLevel"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "status": {
-          "$ref": "#/definitions/GuardianApprovalReviewStatus"
-        },
-        "userAuthorization": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/GuardianUserAuthorization"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "status"
-      ],
-      "type": "object"
-    },
-    "GuardianApprovalReviewAction": {
-      "oneOf": [
-        {
-          "properties": {
-            "command": {
-              "type": "string"
-            },
-            "cwd": {
-              "$ref": "#/definitions/AbsolutePathBuf"
-            },
-            "source": {
-              "$ref": "#/definitions/GuardianCommandSource"
-            },
-            "type": {
-              "enum": [
-                "command"
-              ],
-              "title": "CommandGuardianApprovalReviewActionType",
-              "type": "string"
-            }
-          },
-          "required": [
-            "command",
-            "cwd",
-            "source",
-            "type"
-          ],
-          "title": "CommandGuardianApprovalReviewAction",
-          "type": "object"
-        },
-        {
-          "properties": {
-            "argv": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "cwd": {
-              "$ref": "#/definitions/AbsolutePathBuf"
-            },
-            "program": {
-              "type": "string"
-            },
-            "source": {
-              "$ref": "#/definitions/GuardianCommandSource"
-            },
-            "type": {
-              "enum": [
-                "execve"
-              ],
-              "title": "ExecveGuardianApprovalReviewActionType",
-              "type": "string"
-            }
-          },
-          "required": [
-            "argv",
-            "cwd",
-            "program",
-            "source",
-            "type"
-          ],
-          "title": "ExecveGuardianApprovalReviewAction",
-          "type": "object"
-        },
-        {
-          "properties": {
-            "cwd": {
-              "$ref": "#/definitions/AbsolutePathBuf"
-            },
-            "files": {
-              "items": {
-                "$ref": "#/definitions/AbsolutePathBuf"
-              },
-              "type": "array"
-            },
-            "type": {
-              "enum": [
-                "applyPatch"
-              ],
-              "title": "ApplyPatchGuardianApprovalReviewActionType",
-              "type": "string"
-            }
-          },
-          "required": [
-            "cwd",
-            "files",
-            "type"
-          ],
-          "title": "ApplyPatchGuardianApprovalReviewAction",
-          "type": "object"
-        },
-        {
-          "properties": {
-            "host": {
-              "type": "string"
-            },
-            "port": {
-              "format": "uint16",
-              "minimum": 0.0,
-              "type": "integer"
-            },
-            "protocol": {
-              "$ref": "#/definitions/NetworkApprovalProtocol"
-            },
-            "target": {
-              "type": "string"
-            },
-            "type": {
-              "enum": [
-                "networkAccess"
-              ],
-              "title": "NetworkAccessGuardianApprovalReviewActionType",
-              "type": "string"
-            }
-          },
-          "required": [
-            "host",
-            "port",
-            "protocol",
-            "target",
-            "type"
-          ],
-          "title": "NetworkAccessGuardianApprovalReviewAction",
-          "type": "object"
-        },
-        {
-          "properties": {
-            "integrationId": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "integrationName": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "server": {
-              "type": "string"
-            },
-            "toolName": {
-              "type": "string"
-            },
-            "toolTitle": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "type": {
-              "enum": [
-                "mcpToolCall"
-              ],
-              "title": "McpToolCallGuardianApprovalReviewActionType",
-              "type": "string"
-            }
-          },
-          "required": [
-            "server",
-            "toolName",
-            "type"
-          ],
-          "title": "McpToolCallGuardianApprovalReviewAction",
-          "type": "object"
-        },
-        {
-          "properties": {
-            "permissions": {
-              "$ref": "#/definitions/RequestPermissionProfile"
-            },
-            "reason": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "type": {
-              "enum": [
-                "requestPermissions"
-              ],
-              "title": "RequestPermissionsGuardianApprovalReviewActionType",
-              "type": "string"
-            }
-          },
-          "required": [
-            "permissions",
-            "type"
-          ],
-          "title": "RequestPermissionsGuardianApprovalReviewAction",
-          "type": "object"
-        }
-      ]
-    },
-    "GuardianApprovalReviewStatus": {
-      "description": "[UNSTABLE] Lifecycle state for an approval auto-review.",
-      "enum": [
-        "inProgress",
-        "approved",
-        "denied",
-        "timedOut",
-        "aborted"
-      ],
-      "type": "string"
-    },
-    "GuardianCommandSource": {
-      "enum": [
-        "shell",
-        "unifiedExec"
-      ],
-      "type": "string"
-    },
-    "GuardianRiskLevel": {
-      "description": "[UNSTABLE] Risk level assigned by approval auto-review.",
-      "enum": [
-        "low",
-        "medium",
-        "high",
-        "critical"
-      ],
-      "type": "string"
-    },
-    "GuardianUserAuthorization": {
-      "description": "[UNSTABLE] Authorization level assigned by approval auto-review.",
-      "enum": [
-        "unknown",
-        "low",
-        "medium",
-        "high"
-      ],
-      "type": "string"
-    },
     "NetworkApprovalProtocol": {
       "enum": [
         "http",
@@ -562,13 +562,13 @@
       "type": "object"
     }
   },
-  "description": "[UNSTABLE] Temporary notification payload for approval auto-review. This shape is expected to change soon.",
+  "description": "Notification payload emitted when an approval auto-review starts.",
   "properties": {
     "action": {
-      "$ref": "#/definitions/GuardianApprovalReviewAction"
+      "$ref": "#/definitions/AutoApprovalReviewAction"
     },
     "review": {
-      "$ref": "#/definitions/GuardianApprovalReview"
+      "$ref": "#/definitions/AutoApprovalReview"
     },
     "reviewId": {
       "description": "Stable identifier for this review.",
@@ -601,6 +601,6 @@
     "threadId",
     "turnId"
   ],
-  "title": "ItemGuardianApprovalReviewStartedNotification",
+  "title": "ItemAutoApprovalReviewStartedNotification",
   "type": "object"
 }

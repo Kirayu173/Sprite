@@ -219,7 +219,7 @@ pub(crate) fn tool_runtime_trace_event(event: &EventMsg) -> Option<ToolRuntimeTr
         }),
         EventMsg::Error(_)
         | EventMsg::Warning(_)
-        | EventMsg::GuardianWarning(_)
+        | EventMsg::AutoReviewWarning(_)
         | EventMsg::ModelReroute(_)
         | EventMsg::ProviderPolicyCheck(_)
         | EventMsg::ProviderPolicyMetadata(_)
@@ -254,7 +254,7 @@ pub(crate) fn tool_runtime_trace_event(event: &EventMsg) -> Option<ToolRuntimeTr
         | EventMsg::DynamicToolCallResponse(_)
         | EventMsg::ElicitationRequest(_)
         | EventMsg::ApplyPatchApprovalRequest(_)
-        | EventMsg::GuardianAssessment(_)
+        | EventMsg::AutoReviewAssessment(_)
         | EventMsg::DeprecationNotice(_)
         | EventMsg::StreamError(_)
         | EventMsg::PatchApplyUpdated(_)
@@ -288,7 +288,7 @@ pub(crate) fn wrapped_protocol_event_type(event: &EventMsg) -> Option<&'static s
         EventMsg::Error(_) => Some("error"),
         EventMsg::Warning(_) => Some("warning"),
         EventMsg::ShutdownComplete => Some("shutdown_complete"),
-        EventMsg::GuardianWarning(_)
+        EventMsg::AutoReviewWarning(_)
         | EventMsg::ModelReroute(_)
         | EventMsg::ProviderPolicyCheck(_)
         | EventMsg::ProviderPolicyMetadata(_)
@@ -321,7 +321,7 @@ pub(crate) fn wrapped_protocol_event_type(event: &EventMsg) -> Option<&'static s
         | EventMsg::DynamicToolCallResponse(_)
         | EventMsg::ElicitationRequest(_)
         | EventMsg::ApplyPatchApprovalRequest(_)
-        | EventMsg::GuardianAssessment(_)
+        | EventMsg::AutoReviewAssessment(_)
         | EventMsg::DeprecationNotice(_)
         | EventMsg::StreamError(_)
         | EventMsg::PatchApplyBegin(_)
