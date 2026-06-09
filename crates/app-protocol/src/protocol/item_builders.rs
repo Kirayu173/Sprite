@@ -10,13 +10,13 @@
 //! - The projection is presentation-specific. Core protocol events stay generic, while the
 //!   app-server protocol decides how to surface those events as `ThreadItem`s for clients.
 use crate::protocol::common::ServerNotification;
+use crate::protocol::v2::AutoApprovalReview;
+use crate::protocol::v2::AutoApprovalReviewStatus;
 use crate::protocol::v2::AutoReviewDecisionSource;
 use crate::protocol::v2::CommandAction;
 use crate::protocol::v2::CommandExecutionSource;
 use crate::protocol::v2::CommandExecutionStatus;
 use crate::protocol::v2::FileUpdateChange;
-use crate::protocol::v2::AutoApprovalReview;
-use crate::protocol::v2::AutoApprovalReviewStatus;
 use crate::protocol::v2::ItemAutoApprovalReviewCompletedNotification;
 use crate::protocol::v2::ItemAutoApprovalReviewStartedNotification;
 use crate::protocol::v2::PatchApplyStatus;
@@ -26,12 +26,12 @@ use crate::shell_command_support::parse_command::parse_command;
 use crate::shell_command_support::parse_command::shlex_join;
 use runtime_protocol::ThreadId;
 use runtime_protocol::protocol::ApplyPatchApprovalRequestEvent;
+use runtime_protocol::protocol::AutoReviewAssessmentAction;
+use runtime_protocol::protocol::AutoReviewAssessmentEvent;
 use runtime_protocol::protocol::ExecApprovalRequestEvent;
 use runtime_protocol::protocol::ExecCommandBeginEvent;
 use runtime_protocol::protocol::ExecCommandEndEvent;
 use runtime_protocol::protocol::FileChange;
-use runtime_protocol::protocol::AutoReviewAssessmentAction;
-use runtime_protocol::protocol::AutoReviewAssessmentEvent;
 use runtime_protocol::protocol::PatchApplyBeginEvent;
 use runtime_protocol::protocol::PatchApplyEndEvent;
 use std::collections::HashMap;

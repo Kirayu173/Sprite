@@ -24,10 +24,10 @@ use runtime_protocol::models::MessagePhase;
 use runtime_protocol::models::ResponseItem;
 use runtime_protocol::parse_command::ParsedCommand as CoreParsedCommand;
 use runtime_protocol::protocol::AgentStatus as CoreAgentStatus;
-use runtime_protocol::protocol::ExecCommandSource as CoreExecCommandSource;
-use runtime_protocol::protocol::ExecCommandStatus as CoreExecCommandStatus;
 use runtime_protocol::protocol::AutoReviewRiskLevel as CoreAutoReviewRiskLevel;
 use runtime_protocol::protocol::AutoReviewUserAuthorization as CoreAutoReviewUserAuthorization;
+use runtime_protocol::protocol::ExecCommandSource as CoreExecCommandSource;
+use runtime_protocol::protocol::ExecCommandStatus as CoreExecCommandStatus;
 use runtime_protocol::protocol::PatchApplyStatus as CorePatchApplyStatus;
 use runtime_protocol::protocol::ReviewDecision as CoreReviewDecision;
 use schemars::JsonSchema;
@@ -701,9 +701,7 @@ impl From<AutoApprovalReviewAction> for CoreAutoReviewAssessmentAction {
                 argv,
                 cwd,
             },
-            AutoApprovalReviewAction::ApplyPatch { cwd, files } => {
-                Self::ApplyPatch { cwd, files }
-            }
+            AutoApprovalReviewAction::ApplyPatch { cwd, files } => Self::ApplyPatch { cwd, files },
             AutoApprovalReviewAction::NetworkAccess {
                 target,
                 host,

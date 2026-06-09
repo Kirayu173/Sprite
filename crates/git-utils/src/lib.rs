@@ -1,7 +1,84 @@
 use std::ffi::OsStr;
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::Output;
+use std::time::Duration;
 
 use file_system::ExecutorFileSystem;
+pub use runtime_protocol::protocol::GitSha;
 use utils_absolute_path::AbsolutePathBuf;
+
+const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct GitInfo {
+    pub commit_hash: Option<GitSha>,
+    pub branch: Option<String>,
+    pub repository_url: Option<String>,
+}
+
+pub fn get_git_repo_root(base_dir: &Path) -> Option<PathBuf> {
+    let base = if base_dir.is_dir() {
+        base_dir
+    } else {
+        base_dir.parent()?
+    };
+    for dir in base.ancestors() {
+        if dir.join(".git").exists() {
+            return Some(dir.to_path_buf());
+        }
+    }
+    None
+}
+
+pub async fn collect_git_info(cwd: &Path) -> Option<GitInfo> {
+    if !run_git_command(&["rev-parse", "--git-dir"], cwd)
+        .await?
+        .status
+        .success()
+    {
+        return None;
+    }
+
+    let (commit, branch, remote) = tokio::join!(
+        run_git_command(&["rev-parse", "HEAD"], cwd),
+        run_git_command(&["rev-parse", "--abbrev-ref", "HEAD"], cwd),
+        run_git_command(&["remote", "get-url", "origin"], cwd),
+    );
+
+    Some(GitInfo {
+        commit_hash: command_stdout(commit).map(|hash| GitSha::new(hash.trim())),
+        branch: command_stdout(branch).map(|branch| branch.trim().to_string()),
+        repository_url: command_stdout(remote).map(|remote| remote.trim().to_string()),
+    })
+}
+
+async fn run_git_command(args: &[&str], cwd: &Path) -> Option<Output> {
+    tokio::time::timeout(
+        GIT_COMMAND_TIMEOUT,
+        tokio::process::Command::new("git")
+            .args(args)
+            .current_dir(cwd)
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .env(
+                "GIT_CONFIG_GLOBAL",
+                if cfg!(windows) { "NUL" } else { "/dev/null" },
+            )
+            .output(),
+    )
+    .await
+    .ok()?
+    .ok()
+}
+
+fn command_stdout(output: Option<Output>) -> Option<String> {
+    let output = output?;
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8(output.stdout).ok())
+        .flatten()
+}
 
 /// Resolve the path that should be used for project trust checks.
 ///

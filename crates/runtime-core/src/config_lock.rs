@@ -1,7 +1,9 @@
 use std::io;
+use std::path::Path;
 
 use config::ConfigLayerEntry;
 use config::ConfigLayerSource;
+use config::RuntimeConfig;
 use config::config_toml::ConfigLockfileToml;
 use config::config_toml::ConfigToml;
 use serde::Serialize;
@@ -39,6 +41,54 @@ pub fn config_lockfile(config: ConfigToml) -> ConfigLockfileToml {
         sprite_version: env!("CARGO_PKG_VERSION").to_string(),
         config,
     }
+}
+
+pub fn runtime_config_lockfile(config: &RuntimeConfig) -> io::Result<ConfigLockfileToml> {
+    Ok(config_lockfile(runtime_config_to_lock_config_toml(config)))
+}
+
+pub fn validate_runtime_config_lock_replay(
+    expected_lock: &ConfigLockfileToml,
+    config: &RuntimeConfig,
+    options: ConfigLockReplayOptions,
+) -> io::Result<()> {
+    let actual_lock = runtime_config_lockfile(config)?;
+    validate_config_lock_replay(expected_lock, &actual_lock, options)
+}
+
+pub async fn export_runtime_config_lock_to_path(
+    config: &RuntimeConfig,
+    path: &Path,
+) -> io::Result<()> {
+    let lock = runtime_config_lockfile(config)?;
+    let lock = toml::to_string_pretty(&lock)
+        .map_err(|err| config_lock_error(format!("failed to serialize config lock: {err}")))?;
+    if let Some(parent) = path.parent() {
+        tokio::fs::create_dir_all(parent).await.map_err(|err| {
+            config_lock_error(format!(
+                "failed to create config lock export directory {}: {err}",
+                parent.display()
+            ))
+        })?;
+    }
+    tokio::fs::write(path, lock).await.map_err(|err| {
+        config_lock_error(format!(
+            "failed to write config lock to {}: {err}",
+            path.display()
+        ))
+    })
+}
+
+pub async fn export_runtime_config_lock_to_dir(
+    config: &RuntimeConfig,
+    export_dir: &Path,
+    thread_id: impl std::fmt::Display,
+) -> io::Result<()> {
+    export_runtime_config_lock_to_path(
+        config,
+        &export_dir.join(format!("{thread_id}.config.lock.toml")),
+    )
+    .await
 }
 
 pub fn validate_config_lock_replay(
@@ -89,7 +139,48 @@ pub fn lock_layer_from_config(
 }
 
 pub fn config_without_lock_controls(config: &ConfigToml) -> ConfigToml {
-    config.clone()
+    let mut config = config.clone();
+    drop_lockfile_inputs(&mut config);
+    config
+}
+
+fn runtime_config_to_lock_config_toml(config: &RuntimeConfig) -> ConfigToml {
+    let mut lock_config = config.raw.clone();
+    lock_config.model = Some(config.model.clone());
+    lock_config.model_provider = Some(config.model_provider_id.clone());
+    lock_config.model_context_window = config.model_context_window;
+    lock_config.model_auto_compact_token_limit = config.model_auto_compact_token_limit;
+    lock_config.model_auto_compact_token_limit_scope =
+        Some(config.model_auto_compact_token_limit_scope);
+    lock_config.approval_policy = Some(config.approval_policy);
+    lock_config.approvals_reviewer = Some(config.approvals_reviewer);
+    lock_config.web_search = Some(config.web_search);
+    lock_config.include_permissions_instructions = Some(config.include_permissions_instructions);
+    lock_config.include_apps_instructions = Some(config.include_apps_instructions);
+    lock_config.include_collaboration_mode_instructions =
+        Some(config.include_collaboration_mode_instructions);
+    lock_config.include_environment_context = Some(config.include_environment_context);
+    lock_config.project_doc_max_bytes = Some(config.project_doc_max_bytes);
+    lock_config.project_doc_fallback_filenames =
+        Some(config.project_doc_fallback_filenames.clone());
+    lock_config.tool_output_token_limit = config.tool_output_token_limit;
+    lock_config.hide_agent_reasoning = Some(config.hide_agent_reasoning);
+    lock_config.show_raw_agent_reasoning = Some(config.show_raw_agent_reasoning);
+    drop_lockfile_inputs(&mut lock_config);
+    lock_config
+}
+
+fn drop_lockfile_inputs(config: &mut ConfigToml) {
+    config.profile = None;
+    config.profiles.clear();
+    config.model_instructions_file = None;
+    config.experimental_compact_prompt_file = None;
+    config.model_catalog_json = None;
+    config.sandbox_mode = None;
+    config.sandbox_workspace_write = None;
+    config.default_permissions = None;
+    config.permissions = None;
+    config.experimental_use_unified_exec_tool = None;
 }
 
 fn validate_config_lock_metadata_shape(lock: &ConfigLockfileToml) -> io::Result<()> {
@@ -107,6 +198,7 @@ fn config_lock_for_comparison(
     options: ConfigLockReplayOptions,
 ) -> ConfigLockfileToml {
     let mut lockfile = lockfile.clone();
+    drop_lockfile_inputs(&mut lockfile.config);
     if options.allow_sprite_version_mismatch {
         lockfile.sprite_version.clear();
     }
@@ -155,4 +247,67 @@ where
         )));
     }
     Ok(toml)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use config::permissions_toml::PermissionsToml;
+    use config::profile_toml::ConfigProfile;
+    use config::types::SandboxWorkspaceWrite;
+    use runtime_protocol::config_types::SandboxMode;
+
+    #[test]
+    fn config_without_lock_controls_strips_non_replayable_inputs() {
+        let mut config = ConfigToml {
+            profile: Some("work".to_string()),
+            model_instructions_file: Some(
+                AbsolutePathBuf::try_from(std::path::PathBuf::from("/tmp/instructions.md"))
+                    .expect("absolute path"),
+            ),
+            experimental_compact_prompt_file: Some(
+                AbsolutePathBuf::try_from(std::path::PathBuf::from("/tmp/compact.md"))
+                    .expect("absolute path"),
+            ),
+            model_catalog_json: Some(
+                AbsolutePathBuf::try_from(std::path::PathBuf::from("/tmp/models.json"))
+                    .expect("absolute path"),
+            ),
+            sandbox_mode: Some(SandboxMode::WorkspaceWrite),
+            sandbox_workspace_write: Some(SandboxWorkspaceWrite::default()),
+            default_permissions: Some("dev".to_string()),
+            permissions: Some(PermissionsToml::default()),
+            experimental_use_unified_exec_tool: Some(true),
+            ..Default::default()
+        };
+        config
+            .profiles
+            .insert("work".to_string(), ConfigProfile::default());
+
+        let stripped = config_without_lock_controls(&config);
+
+        assert_eq!(stripped.profile, None);
+        assert!(stripped.profiles.is_empty());
+        assert_eq!(stripped.model_instructions_file, None);
+        assert_eq!(stripped.experimental_compact_prompt_file, None);
+        assert_eq!(stripped.model_catalog_json, None);
+        assert_eq!(stripped.sandbox_mode, None);
+        assert_eq!(stripped.sandbox_workspace_write, None);
+        assert_eq!(stripped.default_permissions, None);
+        assert_eq!(stripped.permissions, None);
+        assert_eq!(stripped.experimental_use_unified_exec_tool, None);
+    }
+
+    #[test]
+    fn replay_comparison_ignores_stripped_inputs() {
+        let expected = config_lockfile(ConfigToml {
+            profile: Some("work".to_string()),
+            sandbox_mode: Some(SandboxMode::ReadOnly),
+            ..Default::default()
+        });
+        let actual = config_lockfile(ConfigToml::default());
+
+        validate_config_lock_replay(&expected, &actual, ConfigLockReplayOptions::default())
+            .expect("stripped inputs should not affect replay comparison");
+    }
 }

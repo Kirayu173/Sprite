@@ -14,8 +14,11 @@ runtime-diagnostics = ["dep:diagnostics", "dep:rollout-trace"]
 [dependencies]
 config = { workspace = true }
 diagnostics = { workspace = true, optional = true }
+rollout = { workspace = true }
 rollout-trace = { workspace = true, optional = true }
 runtime-protocol = { workspace = true }
+state = { workspace = true }
+thread-store = { workspace = true }
 utils-absolute-path = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

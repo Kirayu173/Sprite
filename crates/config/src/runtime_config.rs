@@ -403,6 +403,7 @@ impl RuntimeConfig {
                 .sqlite_home
                 .clone()
                 .map(AbsolutePathBuf::into_path_buf)
+                .or_else(|| std::env::var_os("SPRITE_SQLITE_HOME").map(PathBuf::from))
                 .unwrap_or_else(|| sprite_home.clone().into_path_buf()),
             web_search,
             web_search_tool_config: raw

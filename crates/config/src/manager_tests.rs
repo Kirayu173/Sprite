@@ -69,7 +69,11 @@ async fn read_returns_effective_config_and_layers() {
     assert!(response.origins.contains_key("model"));
     assert!(response.layers.expect("layers").iter().any(|layer| {
         matches!(layer.name, ConfigLayerSource::User { .. })
-            && layer.config.get("model").and_then(serde_json::Value::as_str) == Some("user-model")
+            && layer
+                .config
+                .get("model")
+                .and_then(serde_json::Value::as_str)
+                == Some("user-model")
     }));
 }
 
@@ -90,7 +94,10 @@ async fn value_write_updates_user_config_and_reports_new_version() {
         .expect("write config");
 
     assert_eq!(response.status, WriteStatus::Ok);
-    assert_eq!(response.file_path.as_path(), config_file(&temp_dir).as_path());
+    assert_eq!(
+        response.file_path.as_path(),
+        config_file(&temp_dir).as_path()
+    );
     assert!(response.version.starts_with("sha256:"));
     assert_eq!(
         fs::read_to_string(config_file(&temp_dir)).expect("read written config"),
@@ -182,15 +189,15 @@ async fn higher_precedence_project_layer_reports_overridden_write() {
     let manager = test_manager(&temp_dir);
     fs::create_dir_all(temp_dir.path().join("repo").join(".sprite")).expect("project config dir");
     fs::write(
-        temp_dir.path().join("repo").join(".sprite").join(CONFIG_TOML_FILE),
+        temp_dir
+            .path()
+            .join("repo")
+            .join(".sprite")
+            .join(CONFIG_TOML_FILE),
         r#"model = "project-model""#,
     )
     .expect("project config");
-    fs::write(
-        config_file(&temp_dir),
-        trusted_project_toml(&temp_dir),
-    )
-    .expect("user trust");
+    fs::write(config_file(&temp_dir), trusted_project_toml(&temp_dir)).expect("user trust");
 
     let response = manager
         .write_value(ConfigValueWriteParams {
@@ -218,13 +225,12 @@ async fn explicit_project_config_path_is_readonly() {
     let manager = test_manager(&temp_dir);
     let project_dir = temp_dir.path().join("repo").join(".sprite");
     fs::create_dir_all(&project_dir).expect("project config dir");
-    fs::write(project_dir.join(CONFIG_TOML_FILE), r#"model = "project-model""#)
-        .expect("project config");
     fs::write(
-        config_file(&temp_dir),
-        trusted_project_toml(&temp_dir),
+        project_dir.join(CONFIG_TOML_FILE),
+        r#"model = "project-model""#,
     )
-    .expect("user trust");
+    .expect("project config");
+    fs::write(config_file(&temp_dir), trusted_project_toml(&temp_dir)).expect("user trust");
 
     let err = manager
         .write_value(ConfigValueWriteParams {

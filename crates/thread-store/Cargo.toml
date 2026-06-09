@@ -1,0 +1,30 @@
+﻿[package]
+edition.workspace = true
+license.workspace = true
+name = "thread-store"
+version.workspace = true
+[lib]
+name = "thread_store"
+path = "src/lib.rs"
+doctest = false
+[lints]
+workspace = true
+[dependencies]
+async-trait = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+git-utils = { workspace = true }
+install-context = { workspace = true }
+runtime-protocol = { workspace = true }
+rollout = { workspace = true }
+state = { workspace = true }
+utils-path = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+uuid = { workspace = true }

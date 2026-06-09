@@ -1,0 +1,1 @@
+﻿-- Official device-key persistence is not part of Sprite.

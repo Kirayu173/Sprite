@@ -58,6 +58,52 @@ async fn default_runtime_config_loads_without_user_config_or_auth() {
 }
 
 #[tokio::test]
+async fn runtime_config_uses_sqlite_home_environment_default() {
+    let temp_dir = TempDir::new().expect("tempdir");
+    let sprite_home = temp_dir.path().join("home");
+    let sqlite_home = temp_dir.path().join("sqlite");
+    fs::create_dir_all(&sprite_home).await.expect("home dir");
+    let cwd = AbsolutePathBuf::from_absolute_path(temp_dir.path()).expect("absolute cwd");
+    let _env_guard = EnvVarGuard::set("SPRITE_SQLITE_HOME", &sqlite_home);
+
+    let config = RuntimeConfig::builder()
+        .sprite_home(sprite_home)
+        .cwd(cwd)
+        .loader_overrides(LoaderOverrides::without_host_requirements_for_tests())
+        .load_with(&TestFileSystem, &crate::NoopThreadConfigLoader)
+        .await
+        .expect("runtime config loads");
+
+    assert_eq!(config.sqlite_home, sqlite_home);
+}
+
+struct EnvVarGuard {
+    key: &'static str,
+    previous: Option<std::ffi::OsString>,
+}
+
+impl EnvVarGuard {
+    fn set(key: &'static str, value: impl AsRef<std::ffi::OsStr>) -> Self {
+        let previous = std::env::var_os(key);
+        unsafe {
+            std::env::set_var(key, value);
+        }
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        unsafe {
+            match &self.previous {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
+}
+
+#[tokio::test]
 async fn runtime_config_merges_provider_permission_mcp_skills_and_hooks() {
     let temp_dir = TempDir::new().expect("tempdir");
     let sprite_home = temp_dir.path().join("home");

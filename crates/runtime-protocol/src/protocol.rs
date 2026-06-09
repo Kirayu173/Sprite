@@ -62,9 +62,6 @@ use ts_rs::TS;
 use utils_absolute_path::AbsolutePathBuf;
 
 pub use crate::approvals::ApplyPatchApprovalRequestEvent;
-pub use crate::approvals::ElicitationAction;
-pub use crate::approvals::ExecApprovalRequestEvent;
-pub use crate::approvals::ExecPolicyAmendment;
 pub use crate::approvals::AutoReviewAssessmentAction;
 pub use crate::approvals::AutoReviewAssessmentDecisionSource;
 pub use crate::approvals::AutoReviewAssessmentEvent;
@@ -73,6 +70,9 @@ pub use crate::approvals::AutoReviewAssessmentStatus;
 pub use crate::approvals::AutoReviewCommandSource;
 pub use crate::approvals::AutoReviewRiskLevel;
 pub use crate::approvals::AutoReviewUserAuthorization;
+pub use crate::approvals::ElicitationAction;
+pub use crate::approvals::ExecApprovalRequestEvent;
+pub use crate::approvals::ExecPolicyAmendment;
 pub use crate::approvals::NetworkApprovalContext;
 pub use crate::approvals::NetworkApprovalProtocol;
 pub use crate::approvals::NetworkPolicyAmendment;
@@ -2608,6 +2608,8 @@ pub struct TurnContextItem {
     pub collaboration_mode: Option<CollaborationMode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub multi_agent_version: Option<MultiAgentVersion>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub realtime_active: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effort: Option<ReasoningEffortConfig>,
     // Compatibility-only field written with a default value so older runtime
@@ -4737,6 +4739,7 @@ mod tests {
 
         assert_eq!(item.network, None);
         assert_eq!(item.file_system_sandbox_policy, None);
+        assert_eq!(item.realtime_active, None);
         Ok(())
     }
 
@@ -4800,6 +4803,7 @@ mod tests {
             personality: None,
             collaboration_mode: None,
             multi_agent_version: None,
+            realtime_active: None,
             effort: None,
             summary: ReasoningSummaryConfig::Auto,
         };

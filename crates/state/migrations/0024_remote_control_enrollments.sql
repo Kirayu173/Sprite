@@ -1,0 +1,1 @@
+﻿-- Official remote-control persistence is not part of Sprite.
