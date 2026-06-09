@@ -1,3 +1,10 @@
+pub mod command_canonicalization;
 pub mod config_lock;
 pub mod diagnostics;
+pub mod exec;
+pub mod exec_env;
 pub mod persistence;
+pub mod shell;
+pub mod shell_snapshot;
+pub mod unified_exec;
+pub mod user_shell_command;

@@ -8,6 +8,10 @@ members = [
     "crates/rollout",
     "crates/thread-store",
     "crates/agent-graph-store",
+    "crates/ansi-escape",
+    "crates/exec",
+    "crates/exec-server",
+    "crates/shell-command",
     "crates/runtime-protocol",
     "crates/app-protocol",
     "crates/model-provider-info",
@@ -19,6 +23,8 @@ members = [
     "crates/utils/path-utils",
     "crates/utils/string",
     "crates/utils/image",
+    "crates/utils/output-truncation",
+    "crates/utils/pty",
     "crates/utils/approval-presets",
     "crates/utils/sandbox-summary",
     "crates/async-utils",
@@ -39,8 +45,11 @@ license = "Apache-2.0"
 [workspace.dependencies]
 app-protocol = { path = "crates/app-protocol" }
 async-utils = { path = "crates/async-utils" }
+ansi-escape = { path = "crates/ansi-escape" }
 config = { path = "crates/config" }
 diagnostics = { path = "crates/diagnostics" }
+exec = { path = "crates/exec" }
+exec-server = { path = "crates/exec-server" }
 execpolicy = { path = "crates/execpolicy" }
 features = { path = "crates/features" }
 file-system = { path = "crates/file-system" }
@@ -55,6 +64,7 @@ runtime-protocol = { path = "crates/runtime-protocol" }
 rollout = { path = "crates/rollout" }
 rollout-trace = { path = "crates/rollout-trace" }
 response-debug-context = { path = "crates/response-debug-context" }
+shell-command = { path = "crates/shell-command" }
 state = { path = "crates/state" }
 thread-store = { path = "crates/thread-store" }
 utils-absolute-path = { path = "crates/utils/absolute-path" }
@@ -62,13 +72,18 @@ utils-approval-presets = { path = "crates/utils/approval-presets" }
 utils-home-dir = { path = "crates/utils/home-dir" }
 utils-image = { path = "crates/utils/image" }
 utils-json-to-toml = { path = "crates/utils/json-to-toml" }
+utils-output-truncation = { path = "crates/utils/output-truncation" }
 utils-path = { path = "crates/utils/path-utils" }
+utils-pty = { path = "crates/utils/pty" }
 utils-sandbox-summary = { path = "crates/utils/sandbox-summary" }
 utils-string = { path = "crates/utils/string" }
 
+ansi-to-tui = "7.0.0"
 anyhow = "1"
+arc-swap = "1.9.0"
 async-trait = "0.1.89"
 base64 = "0.22.1"
+bytes = "1.10.1"
 chardetng = "0.1.17"
 chrono = "0.4.43"
 clap = "4"
@@ -87,11 +102,14 @@ image = { version = "^0.25.9", default-features = false }
 indexmap = "2.12.1"
 inventory = "0.3.19"
 libc = "0.2.178"
+lazy_static = "1"
 log = "0.4"
 maplit = "1.0.2"
 mime_guess = "2.0.5"
 multimap = "0.10.1"
+once_cell = "1.20.2"
 owo-colors = "4"
+portable-pty = "0.9.0"
 pretty_assertions = "1.4.1"
 opentelemetry = "0.31.0"
 opentelemetry-appender-tracing = "0.31.0"
@@ -103,6 +121,8 @@ proc-macro2 = "1"
 prost = "0.14.3"
 quick-xml = { version = "0.38.4", features = ["serialize"] }
 quote = "1"
+rand = "0.9"
+ratatui = "0.29.0"
 regex-lite = "0.1.8"
 regex = "1"
 reqwest = { version = "0.12", features = ["cookies"] }
@@ -138,6 +158,7 @@ tracing-subscriber = "0.3.22"
 tree-sitter = "0.25.10"
 tree-sitter-bash = "0.25"
 ts-rs = "11"
+url = "2"
 uuid = "1"
 wildmatch = "2.6.1"
 which = "8"
