@@ -19,7 +19,11 @@ diagnostics = { workspace = true, optional = true }
 dunce = { workspace = true }
 exec-server = { workspace = true }
 execpolicy = { workspace = true }
+file-search = { workspace = true }
+file-system = { workspace = true }
+file-watcher = { workspace = true }
 futures = { workspace = true }
+git-utils = { workspace = true }
 network-proxy = { workspace = true }
 rollout = { workspace = true }
 rollout-trace = { workspace = true, optional = true }
@@ -29,11 +33,13 @@ shell-command = { workspace = true }
 state = { workspace = true }
 thread-store = { workspace = true }
 utils-absolute-path = { workspace = true }
+utils-image = { workspace = true }
 utils-output-truncation = { workspace = true }
 utils-pty = { workspace = true }
 windows-sandbox = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha1 = { workspace = true }
 similar = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs", "macros", "process", "rt", "sync", "time"] }

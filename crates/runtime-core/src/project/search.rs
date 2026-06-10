@@ -1,0 +1,11 @@
+pub use file_search::FileMatch;
+pub use file_search::FileSearchOptions;
+pub use file_search::FileSearchResults;
+pub use file_search::FileSearchSession;
+pub use file_search::FileSearchSnapshot;
+pub use file_search::MatchType;
+pub use file_search::SessionReporter;
+pub use file_search::cmp_by_score_desc_then_path_asc;
+pub use file_search::create_session;
+pub use file_search::file_name_from_path;
+pub use file_search::run;

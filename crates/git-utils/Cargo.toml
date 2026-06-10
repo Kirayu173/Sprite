@@ -1,18 +1,30 @@
-﻿[package]
+[package]
 name = "git-utils"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+readme = "README.md"
+
+[lints]
+workspace = true
 
 [dependencies]
 file-system = { workspace = true }
 runtime-protocol = { workspace = true }
-tokio = { workspace = true, features = ["process", "time"] }
 utils-absolute-path = { workspace = true }
+futures = { workspace = true, features = ["alloc"] }
+schemars = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = ["macros", "process", "rt", "time"] }
+ts-rs = { workspace = true, features = [
+    "uuid-impl",
+    "serde-json-impl",
+    "no-serde-warnings",
+] }
 
 [dev-dependencies]
+pretty_assertions = { workspace = true }
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["fs", "macros", "rt-multi-thread"] }
 
 [lib]
 doctest = false

@@ -7,6 +7,7 @@ pub mod exec_env;
 pub mod exec_policy;
 pub mod network_policy_decision;
 pub mod persistence;
+pub mod project;
 pub mod safety;
 pub mod sandbox_tags;
 pub mod shell;

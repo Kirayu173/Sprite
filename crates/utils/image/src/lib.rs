@@ -1,7 +1,11 @@
+use std::num::NonZeroUsize;
 use std::path::Path;
+use std::sync::LazyLock;
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use utils_cache::BlockingLruCache;
+use utils_cache::sha1_digest;
 use image::ColorType;
 use image::DynamicImage;
 use image::GenericImageView;
@@ -39,6 +43,15 @@ pub enum PromptImageMode {
     Original,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct ImageCacheKey {
+    digest: [u8; 20],
+    mode: PromptImageMode,
+}
+
+static IMAGE_CACHE: LazyLock<BlockingLruCache<ImageCacheKey, EncodedImage>> =
+    LazyLock::new(|| BlockingLruCache::new(NonZeroUsize::new(32).unwrap_or(NonZeroUsize::MIN)));
+
 pub fn load_for_prompt_bytes(
     path: &Path,
     file_bytes: Vec<u8>,
@@ -46,56 +59,63 @@ pub fn load_for_prompt_bytes(
 ) -> Result<EncodedImage, ImageProcessingError> {
     let path_buf = path.to_path_buf();
 
-    let format = match image::guess_format(&file_bytes) {
-        Ok(ImageFormat::Png) => Some(ImageFormat::Png),
-        Ok(ImageFormat::Jpeg) => Some(ImageFormat::Jpeg),
-        Ok(ImageFormat::Gif) => Some(ImageFormat::Gif),
-        Ok(ImageFormat::WebP) => Some(ImageFormat::WebP),
-        _ => None,
+    let key = ImageCacheKey {
+        digest: sha1_digest(&file_bytes),
+        mode,
     };
 
-    let dynamic = image::load_from_memory(&file_bytes)
-        .map_err(|source| ImageProcessingError::decode_error(&path_buf, source))?;
+    IMAGE_CACHE.get_or_try_insert_with(key, move || {
+        let format = match image::guess_format(&file_bytes) {
+            Ok(ImageFormat::Png) => Some(ImageFormat::Png),
+            Ok(ImageFormat::Jpeg) => Some(ImageFormat::Jpeg),
+            Ok(ImageFormat::Gif) => Some(ImageFormat::Gif),
+            Ok(ImageFormat::WebP) => Some(ImageFormat::WebP),
+            _ => None,
+        };
 
-    let (width, height) = dynamic.dimensions();
+        let dynamic = image::load_from_memory(&file_bytes)
+            .map_err(|source| ImageProcessingError::decode_error(&path_buf, source))?;
 
-    let encoded = if mode == PromptImageMode::Original
-        || (width <= MAX_DIMENSION && height <= MAX_DIMENSION)
-    {
-        if let Some(format) = format.filter(|format| can_preserve_source_bytes(*format)) {
-            let mime = format_to_mime(format);
-            EncodedImage {
-                bytes: file_bytes,
-                mime,
-                width,
-                height,
+        let (width, height) = dynamic.dimensions();
+
+        let encoded = if mode == PromptImageMode::Original
+            || (width <= MAX_DIMENSION && height <= MAX_DIMENSION)
+        {
+            if let Some(format) = format.filter(|format| can_preserve_source_bytes(*format)) {
+                let mime = format_to_mime(format);
+                EncodedImage {
+                    bytes: file_bytes,
+                    mime,
+                    width,
+                    height,
+                }
+            } else {
+                let (bytes, output_format) = encode_image(&dynamic, ImageFormat::Png)?;
+                let mime = format_to_mime(output_format);
+                EncodedImage {
+                    bytes,
+                    mime,
+                    width,
+                    height,
+                }
             }
         } else {
-            let (bytes, output_format) = encode_image(&dynamic, ImageFormat::Png)?;
+            let resized = dynamic.resize(MAX_DIMENSION, MAX_DIMENSION, FilterType::Triangle);
+            let target_format = format
+                .filter(|format| can_preserve_source_bytes(*format))
+                .unwrap_or(ImageFormat::Png);
+            let (bytes, output_format) = encode_image(&resized, target_format)?;
             let mime = format_to_mime(output_format);
             EncodedImage {
                 bytes,
                 mime,
-                width,
-                height,
+                width: resized.width(),
+                height: resized.height(),
             }
-        }
-    } else {
-        let resized = dynamic.resize(MAX_DIMENSION, MAX_DIMENSION, FilterType::Triangle);
-        let target_format = format
-            .filter(|format| can_preserve_source_bytes(*format))
-            .unwrap_or(ImageFormat::Png);
-        let (bytes, output_format) = encode_image(&resized, target_format)?;
-        let mime = format_to_mime(output_format);
-        EncodedImage {
-            bytes,
-            mime,
-            width: resized.width(),
-            height: resized.height(),
-        }
-    };
+        };
 
-    Ok(encoded)
+        Ok(encoded)
+    })
 }
 
 fn can_preserve_source_bytes(format: ImageFormat) -> bool {
@@ -296,6 +316,10 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn reprocesses_updated_file_contents() {
+        {
+            IMAGE_CACHE.clear();
+        }
+
         let first_image = ImageBuffer::from_pixel(32, 16, Rgba([20u8, 120, 220, 255]));
         let first_bytes = image_bytes(&first_image, ImageFormat::Png);
 
