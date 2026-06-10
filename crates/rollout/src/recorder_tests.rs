@@ -220,7 +220,7 @@ async fn load_rollout_items_skips_legacy_ghost_snapshot_lines() -> std::io::Resu
 }
 
 #[tokio::test]
-async fn load_rollout_items_preserves_legacy_guardian_assessment_lines() -> std::io::Result<()> {
+async fn load_rollout_items_preserves_legacy_auto_review_assessment_lines() -> std::io::Result<()> {
     let home = TempDir::new().expect("temp dir");
     let rollout_path = home.path().join("rollout.jsonl");
     let mut file = File::create(&rollout_path)?;

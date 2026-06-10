@@ -17,13 +17,13 @@ mod sqlite_metrics;
 pub mod state_db;
 pub(crate) mod truncation;
 
-pub(crate) mod local_client {
-    pub(crate) struct Originator {
+pub(crate) mod local_origin {
+    pub(crate) struct SessionOriginator {
         pub(crate) value: String,
     }
 
-    pub(crate) fn originator() -> Originator {
-        Originator {
+    pub(crate) fn session_originator() -> SessionOriginator {
+        SessionOriginator {
             value: "sprite".to_string(),
         }
     }
@@ -87,7 +87,6 @@ pub use session_index::find_thread_meta_by_name_str;
 pub use session_index::find_thread_name_by_id;
 pub use session_index::find_thread_names_by_ids;
 pub use state_db::StateDbHandle;
-pub use state_db::sqlite_diagnostics_recorder;
 pub use truncation::fork_turn_positions_in_rollout;
 pub use truncation::initial_history_has_prior_user_turns;
 pub use truncation::is_user_turn_boundary;

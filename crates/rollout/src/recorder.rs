@@ -45,7 +45,7 @@ use super::list::parse_timestamp_uuid_from_filename;
 use super::metadata;
 use super::session_index::find_thread_names_by_ids;
 use crate::config::RolloutConfigView;
-use crate::local_client::originator;
+use crate::local_origin::session_originator;
 use crate::state_db;
 use crate::state_db::StateDbHandle;
 use git_utils::collect_git_info;
@@ -703,7 +703,7 @@ impl RolloutRecorder {
                     parent_thread_id,
                     timestamp,
                     cwd: config.cwd().to_path_buf(),
-                    originator: originator().value,
+                    originator: session_originator().value,
                     cli_version: env!("CARGO_PKG_VERSION").to_string(),
                     agent_nickname: source.get_nickname(),
                     agent_role: source.get_agent_role(),

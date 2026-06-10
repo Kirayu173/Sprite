@@ -41,7 +41,6 @@ members = [
     "crates/linux-sandbox",
     "crates/network-proxy",
     "crates/windows-sandbox-rs",
-    "crates/otel-shim",
     "crates/utils/cache",
 ]
 resolver = "2"
