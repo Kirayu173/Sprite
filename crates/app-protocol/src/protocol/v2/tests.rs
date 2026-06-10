@@ -58,7 +58,7 @@ fn test_absolute_path() -> AbsolutePathBuf {
 }
 
 #[test]
-fn approvals_reviewer_serializes_auto_review_and_accepts_legacy_guardian_subagent() {
+fn approvals_reviewer_serializes_auto_review() {
     assert_eq!(
         serde_json::to_string(&ApprovalsReviewer::User).expect("serialize reviewer"),
         "\"user\""
@@ -68,7 +68,7 @@ fn approvals_reviewer_serializes_auto_review_and_accepts_legacy_guardian_subagen
         "\"auto_review\""
     );
 
-    for value in ["user", "auto_review", "guardian_subagent"] {
+    for value in ["user", "auto_review"] {
         let json = format!("\"{value}\"");
         let reviewer: ApprovalsReviewer =
             serde_json::from_str(&json).expect("deserialize reviewer");
@@ -79,6 +79,10 @@ fn approvals_reviewer_serializes_auto_review_and_accepts_legacy_guardian_subagen
         };
         assert_eq!(expected, reviewer);
     }
+
+    let err = serde_json::from_str::<ApprovalsReviewer>("\"legacy_auto_reviewer\"")
+        .expect_err("legacy reviewer value should be rejected");
+    assert!(err.to_string().contains("unknown variant"));
 }
 
 #[test]

@@ -75,7 +75,11 @@ pub fn exec_env_policy_from_shell_policy(policy: &ShellEnvironmentPolicy) -> Exe
         ignore_default_excludes: policy.ignore_default_excludes,
         exclude: policy.exclude.iter().map(ToString::to_string).collect(),
         r#set: policy.r#set.clone(),
-        include_only: policy.include_only.iter().map(ToString::to_string).collect(),
+        include_only: policy
+            .include_only
+            .iter()
+            .map(ToString::to_string)
+            .collect(),
     }
 }
 
@@ -121,7 +125,11 @@ mod tests {
                 .expect("runtime paths"),
         );
 
-        assert!(params.command[0].to_ascii_lowercase().contains("powershell"));
+        assert!(
+            params.command[0]
+                .to_ascii_lowercase()
+                .contains("powershell")
+        );
         assert_eq!(
             &params.command[1..],
             ["-NoProfile", "-Command", "Write-Output ok"]

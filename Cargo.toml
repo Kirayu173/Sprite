@@ -33,7 +33,13 @@ members = [
     "crates/features",
     "crates/file-system",
     "crates/git-utils",
+    "crates/process-hardening",
+    "crates/execpolicy-legacy",
+    "crates/sandboxing",
+    "crates/linux-sandbox",
     "crates/network-proxy",
+    "crates/windows-sandbox-rs",
+    "crates/otel-shim",
 ]
 resolver = "2"
 
@@ -51,12 +57,14 @@ diagnostics = { path = "crates/diagnostics" }
 exec = { path = "crates/exec" }
 exec-server = { path = "crates/exec-server" }
 execpolicy = { path = "crates/execpolicy" }
+execpolicy-legacy = { package = "sprite-execpolicy-legacy", path = "crates/execpolicy-legacy" }
 features = { path = "crates/features" }
 file-system = { path = "crates/file-system" }
 git-utils = { path = "crates/git-utils" }
 install-context = { path = "crates/install-context" }
 model-provider-info = { path = "crates/model-provider-info" }
 network-proxy = { path = "crates/network-proxy" }
+process-hardening = { package = "sprite-process-hardening", path = "crates/process-hardening" }
 experimental-api-macros = { path = "crates/experimental-api-macros" }
 agent-graph-store = { path = "crates/agent-graph-store" }
 runtime-core = { path = "crates/runtime-core" }
@@ -64,6 +72,7 @@ runtime-protocol = { path = "crates/runtime-protocol" }
 rollout = { path = "crates/rollout" }
 rollout-trace = { path = "crates/rollout-trace" }
 response-debug-context = { path = "crates/response-debug-context" }
+sandboxing = { package = "sprite-sandboxing", path = "crates/sandboxing" }
 shell-command = { path = "crates/shell-command" }
 state = { path = "crates/state" }
 thread-store = { path = "crates/thread-store" }
@@ -77,22 +86,27 @@ utils-path = { path = "crates/utils/path-utils" }
 utils-pty = { path = "crates/utils/pty" }
 utils-sandbox-summary = { path = "crates/utils/sandbox-summary" }
 utils-string = { path = "crates/utils/string" }
+windows-sandbox = { package = "sprite-windows-sandbox", path = "crates/windows-sandbox-rs" }
 
 ansi-to-tui = "7.0.0"
 anyhow = "1"
 arc-swap = "1.9.0"
 async-trait = "0.1.89"
+allocative = "=0.3.4"
 base64 = "0.22.1"
 bytes = "1.10.1"
 chardetng = "0.1.17"
 chrono = "0.4.43"
 clap = "4"
+derive_more = "=2.0.1"
 dirs = "6"
 dns-lookup = "2.1.1"
 dunce = "1.0.4"
 encoding_rs = "0.8.35"
+env_logger = "=0.11.9"
 futures = "0.3.31"
 gethostname = "1.1.0"
+glob = "=0.3.3"
 globset = "0.4"
 http = "1.3.1"
 icu_decimal = "2.1"
@@ -103,6 +117,7 @@ indexmap = "2.12.1"
 inventory = "0.3.19"
 libc = "0.2.178"
 lazy_static = "1"
+landlock = "=0.4.4"
 log = "0.4"
 maplit = "1.0.2"
 mime_guess = "2.0.5"
@@ -117,6 +132,7 @@ opentelemetry-otlp = "0.31.0"
 opentelemetry-semantic-conventions = "0.31.0"
 opentelemetry_sdk = "0.31.0"
 os_info = "3.12.0"
+path-absolutize = "=3.1.1"
 proc-macro2 = "1"
 prost = "0.14.3"
 quick-xml = { version = "0.38.4", features = ["serialize"] }
@@ -128,6 +144,7 @@ regex = "1"
 reqwest = { version = "0.12", features = ["cookies"] }
 rmcp = { version = "1.7.0", default-features = false }
 schemars = "0.8.22"
+seccompiler = "=0.5.0"
 serde = { version = "1", features = ["derive"] }
 serde_ignored = "0.1.14"
 serde_json = "1"
@@ -137,6 +154,7 @@ sha2 = "0.10.9"
 shlex = "1.3.0"
 similar = "2.7.0"
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "chrono", "macros", "migrate"] }
+starlark = "=0.13.0"
 strum = "0.27.2"
 strum_macros = "0.28.0"
 syn = { version = "2", features = ["full", "extra-traits"] }
@@ -153,6 +171,7 @@ tonic = "0.14.2"
 tonic-prost = "0.14.2"
 tonic-prost-build = "0.14.2"
 tracing = "0.1.44"
+tracing-appender = "=0.2.3"
 tracing-opentelemetry = "0.32.0"
 tracing-subscriber = "0.3.22"
 tree-sitter = "0.25.10"
@@ -162,6 +181,7 @@ url = "2"
 uuid = "1"
 wildmatch = "2.6.1"
 which = "8"
+windows = "=0.58.0"
 winapi-util = "0.1.11"
 windows-sys = "0.52"
 zstd = "0.13"

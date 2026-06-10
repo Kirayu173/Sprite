@@ -12,11 +12,11 @@ use crate::exec::ProcessOutputCollection;
 use crate::exec::collect_process_snapshot;
 use crate::unified_exec::store::ProcessStore;
 use crate::unified_exec::types::DEFAULT_MAX_BACKGROUND_TERMINAL_TIMEOUT_MS;
+use crate::unified_exec::types::ExecCommandRequest;
 use crate::unified_exec::types::MAX_YIELD_TIME_MS;
 use crate::unified_exec::types::MIN_EMPTY_YIELD_TIME_MS;
 use crate::unified_exec::types::MIN_YIELD_TIME_MS;
 use crate::unified_exec::types::UNIFIED_EXEC_OUTPUT_MAX_BYTES;
-use crate::unified_exec::types::ExecCommandRequest;
 use crate::unified_exec::types::UnifiedExecError;
 use crate::unified_exec::types::UnifiedExecResponse;
 use crate::unified_exec::types::WriteStdinRequest;
@@ -144,7 +144,11 @@ impl UnifiedExecProcessManager {
 
         let snapshot = match read_until_yield.await {
             Ok(result) => result?,
-            Err(_) => return self.read_until_yield(process_id, after_seq, truncation_policy).await,
+            Err(_) => {
+                return self
+                    .read_until_yield(process_id, after_seq, truncation_policy)
+                    .await;
+            }
         };
 
         let mut store = self.process_store.lock().await;

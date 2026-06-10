@@ -4,8 +4,8 @@ use std::time::Duration;
 use std::time::Instant;
 
 use exec_server::Environment;
-use exec_server::ExecOutputStream;
 use exec_server::ExecEnvPolicy;
+use exec_server::ExecOutputStream;
 use exec_server::ExecParams;
 use exec_server::ExecProcess;
 use exec_server::ExecServerRuntimePaths;
@@ -95,7 +95,7 @@ impl ExecExpiration {
     }
 }
 
-pub async fn execute_local_command(
+pub(crate) async fn execute_local_command(
     params: LocalExecParams,
 ) -> Result<ExecToolCallOutput, exec_server::ExecServerError> {
     let environment = Environment::local(params.runtime_paths);

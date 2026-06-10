@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "execpolicy"
 version.workspace = true
 edition.workspace = true
@@ -11,6 +11,7 @@ multimap = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 shlex = { workspace = true }
+starlark = { workspace = true }
 thiserror = { workspace = true }
 utils-absolute-path = { workspace = true }
 

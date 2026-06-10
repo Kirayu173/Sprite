@@ -23,6 +23,7 @@ use utils_string::truncate_middle_chars;
 use utils_string::truncate_middle_with_token_budget;
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;
+pub type CodexErr = RuntimeError;
 
 /// Limit UI error messages to a reasonable size while keeping useful context.
 const ERROR_MESSAGE_UI_MAX_BYTES: usize = 2 * 1024;
@@ -46,6 +47,10 @@ pub enum SandboxErr {
     /// Command was killed by a signal
     #[error("command was killed by a signal")]
     Signal(i32),
+
+    /// Landlock ruleset failed to apply.
+    #[error("failed to apply landlock restrictions")]
+    LandlockRestrict,
 }
 
 #[derive(Error, Debug)]

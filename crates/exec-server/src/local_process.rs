@@ -400,9 +400,10 @@ impl LocalProcess {
             if !process.tty {
                 return Ok(ResizeResponse { resized: false });
             }
-            process.session.resize(params.size.into()).map_err(|err| {
-                ExecServerError::Protocol(format!("failed to resize PTY: {err}"))
-            })?;
+            process
+                .session
+                .resize(params.size.into())
+                .map_err(|err| ExecServerError::Protocol(format!("failed to resize PTY: {err}")))?;
             true
         };
 
@@ -817,7 +818,10 @@ mod tests {
         let response = backend
             .resize_process(ResizeParams {
                 process_id: process.process_id.clone(),
-                size: TerminalSize { rows: 41, cols: 132 },
+                size: TerminalSize {
+                    rows: 41,
+                    cols: 132,
+                },
             })
             .await
             .expect("resize process");
@@ -825,7 +829,10 @@ mod tests {
         assert!(response.resized);
         assert_eq!(
             size_rx.await.expect("receive resize"),
-            utils_pty::TerminalSize { rows: 41, cols: 132 }
+            utils_pty::TerminalSize {
+                rows: 41,
+                cols: 132
+            }
         );
         backend.shutdown().await;
     }

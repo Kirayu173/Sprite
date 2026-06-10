@@ -1,3 +1,4 @@
+use starlark::Error as StarlarkError;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -30,8 +31,6 @@ pub enum Error {
     InvalidExample(String),
     #[error("invalid rule: {0}")]
     InvalidRule(String),
-    #[error("parse error: {0}")]
-    Parse(String),
     #[error(
         "expected every example to match at least one rule. rules: {rules:?}; unmatched examples: \
          {examples:?}"
@@ -47,6 +46,8 @@ pub enum Error {
         example: String,
         location: Option<ErrorLocation>,
     },
+    #[error("starlark error: {0}")]
+    Starlark(StarlarkError),
 }
 
 impl Error {
@@ -78,6 +79,22 @@ impl Error {
         match self {
             Error::ExampleDidNotMatch { location, .. }
             | Error::ExampleDidMatch { location, .. } => location.clone(),
+            Error::Starlark(err) => err.span().map(|span| {
+                let resolved = span.resolve_span();
+                ErrorLocation {
+                    path: span.filename().to_string(),
+                    range: TextRange {
+                        start: TextPosition {
+                            line: resolved.begin.line + 1,
+                            column: resolved.begin.column + 1,
+                        },
+                        end: TextPosition {
+                            line: resolved.end.line + 1,
+                            column: resolved.end.column + 1,
+                        },
+                    },
+                }
+            }),
             _ => None,
         }
     }

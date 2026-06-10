@@ -15,8 +15,9 @@ impl ShellSnapshot {
         shell_path: impl AsRef<Path>,
         cwd: impl AsRef<Path>,
     ) -> Result<Self, ShellSnapshotError> {
-        let path = AbsolutePathBuf::from_absolute_path(shell_path.as_ref().to_path_buf())
-            .map_err(|_| ShellSnapshotError::RelativeShellPath(shell_path.as_ref().to_path_buf()))?;
+        let path = AbsolutePathBuf::from_absolute_path(shell_path.as_ref().to_path_buf()).map_err(
+            |_| ShellSnapshotError::RelativeShellPath(shell_path.as_ref().to_path_buf()),
+        )?;
         let cwd = AbsolutePathBuf::from_absolute_path(cwd.as_ref().to_path_buf())
             .map_err(|_| ShellSnapshotError::RelativeCwd(cwd.as_ref().to_path_buf()))?;
         let snapshot = Self { path, cwd };
@@ -31,7 +32,9 @@ impl ShellSnapshot {
             ));
         }
         if !self.cwd.as_path().is_dir() {
-            return Err(ShellSnapshotError::MissingCwd(self.cwd.as_path().to_path_buf()));
+            return Err(ShellSnapshotError::MissingCwd(
+                self.cwd.as_path().to_path_buf(),
+            ));
         }
         Ok(())
     }

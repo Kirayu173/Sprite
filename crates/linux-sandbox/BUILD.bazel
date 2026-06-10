@@ -1,0 +1,9 @@
+load("//:defs.bzl", "sprite_rust_crate")
+
+sprite_rust_crate(
+    name = "linux-sandbox",
+    crate_name = "sprite_linux_sandbox",
+    extra_binaries = [
+        "//sprite-rs/bwrap:bwrap",
+    ],
+)

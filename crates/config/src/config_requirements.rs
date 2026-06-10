@@ -133,8 +133,6 @@ pub struct ConfigRequirements {
     pub network: Option<Sourced<NetworkConstraints>>,
     /// Managed filesystem constraints derived from requirements.
     pub filesystem: Option<Sourced<FilesystemConstraints>>,
-    /// Source for the managed guardian policy config, when one is configured.
-    pub guardian_policy_config_source: Option<RequirementSource>,
 }
 
 impl Default for ConfigRequirements {
@@ -174,7 +172,6 @@ impl Default for ConfigRequirements {
             ),
             network: None,
             filesystem: None,
-            guardian_policy_config_source: None,
         }
     }
 }
@@ -801,7 +798,6 @@ pub struct ConfigRequirementsToml {
     #[serde(rename = "experimental_network")]
     pub network: Option<NetworkRequirementsToml>,
     pub permissions: Option<PermissionsRequirementsToml>,
-    pub guardian_policy_config: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
@@ -852,7 +848,6 @@ pub struct ConfigRequirementsWithSources {
     pub enforce_residency: Option<Sourced<ResidencyRequirement>>,
     pub network: Option<Sourced<NetworkRequirementsToml>>,
     pub permissions: Option<Sourced<PermissionsRequirementsToml>>,
-    pub guardian_policy_config: Option<Sourced<String>>,
 }
 
 impl ConfigRequirementsWithSources {
@@ -893,17 +888,9 @@ impl ConfigRequirementsWithSources {
             enforce_residency: _,
             network: _,
             permissions: _,
-            guardian_policy_config: _,
         } = &other;
 
         let mut other = other;
-        if other
-            .guardian_policy_config
-            .as_deref()
-            .is_some_and(|value| value.trim().is_empty())
-        {
-            other.guardian_policy_config = None;
-        }
         fill_missing_take!(
             self,
             other,
@@ -927,7 +914,6 @@ impl ConfigRequirementsWithSources {
                 enforce_residency,
                 network,
                 permissions,
-                guardian_policy_config,
             }
         );
     }
@@ -952,7 +938,6 @@ impl ConfigRequirementsWithSources {
             enforce_residency,
             network,
             permissions,
-            guardian_policy_config,
         } = self;
         ConfigRequirementsToml {
             allowed_approval_policies: allowed_approval_policies.map(|sourced| sourced.value),
@@ -974,7 +959,6 @@ impl ConfigRequirementsWithSources {
             enforce_residency: enforce_residency.map(|sourced| sourced.value),
             network: network.map(|sourced| sourced.value),
             permissions: permissions.map(|sourced| sourced.value),
-            guardian_policy_config: guardian_policy_config.map(|sourced| sourced.value),
         }
     }
 }
@@ -1077,10 +1061,6 @@ impl ConfigRequirementsToml {
             && self.enforce_residency.is_none()
             && self.network.is_none()
             && self.permissions.is_none()
-            && self
-                .guardian_policy_config
-                .as_deref()
-                .is_none_or(|value| value.trim().is_empty())
     }
 }
 
@@ -1110,7 +1090,6 @@ impl TryFrom<ConfigRequirementsWithSources> for ConfigRequirements {
             enforce_residency,
             network,
             permissions,
-            guardian_policy_config,
         } = toml;
 
         let approval_policy = match allowed_approval_policies {
@@ -1368,7 +1347,6 @@ impl TryFrom<ConfigRequirementsWithSources> for ConfigRequirements {
             let Sourced { value, source } = sourced_permissions;
             Sourced::new(FilesystemConstraints::from(value), source)
         });
-        let guardian_policy_config_source = guardian_policy_config.map(|sourced| sourced.source);
         Ok(ConfigRequirements {
             approval_policy,
             approvals_reviewer,
@@ -1386,7 +1364,6 @@ impl TryFrom<ConfigRequirementsWithSources> for ConfigRequirements {
             enforce_residency,
             network,
             filesystem,
-            guardian_policy_config_source,
         })
     }
 }
@@ -1484,7 +1461,6 @@ mod tests {
             enforce_residency,
             network,
             permissions,
-            guardian_policy_config,
         } = toml;
         ConfigRequirementsWithSources {
             allowed_approval_policies: allowed_approval_policies
@@ -1515,8 +1491,6 @@ mod tests {
                 .map(|value| Sourced::new(value, RequirementSource::Unknown)),
             network: network.map(|value| Sourced::new(value, RequirementSource::Unknown)),
             permissions: permissions.map(|value| Sourced::new(value, RequirementSource::Unknown)),
-            guardian_policy_config: guardian_policy_config
-                .map(|value| Sourced::new(value, RequirementSource::Unknown)),
         }
     }
 
@@ -1678,7 +1652,6 @@ mod tests {
         };
         let enforce_residency = ResidencyRequirement::Us;
         let enforce_source = source.clone();
-        let guardian_policy_config = "Use the company-managed guardian policy.".to_string();
 
         // Intentionally constructed without `..Default::default()` so adding a new field to
         // `ConfigRequirementsToml` forces this test to be updated.
@@ -1702,7 +1675,6 @@ mod tests {
             enforce_residency: Some(enforce_residency),
             network: None,
             permissions: None,
-            guardian_policy_config: Some(guardian_policy_config.clone()),
         };
 
         target.merge_unset_fields(source.clone(), other);
@@ -1746,7 +1718,6 @@ mod tests {
                 enforce_residency: Some(Sourced::new(enforce_residency, enforce_source)),
                 network: None,
                 permissions: None,
-                guardian_policy_config: Some(Sourced::new(guardian_policy_config, source)),
             }
         );
     }
@@ -1789,7 +1760,6 @@ mod tests {
                 enforce_residency: None,
                 network: None,
                 permissions: None,
-                guardian_policy_config: None,
             }
         );
         Ok(())
@@ -1840,73 +1810,8 @@ mod tests {
                 enforce_residency: None,
                 network: None,
                 permissions: None,
-                guardian_policy_config: None,
             }
         );
-        Ok(())
-    }
-
-    #[test]
-    fn merge_unset_fields_ignores_blank_guardian_override() {
-        let mut target = ConfigRequirementsWithSources::default();
-        target.merge_unset_fields(
-            system_requirements_source_for_test(),
-            ConfigRequirementsToml {
-                guardian_policy_config: Some("   \n\t".to_string()),
-                ..Default::default()
-            },
-        );
-        target.merge_unset_fields(
-            RequirementSource::SystemRequirementsToml {
-                file: system_requirements_toml_file_for_test()
-                    .expect("system requirements.toml path"),
-            },
-            ConfigRequirementsToml {
-                guardian_policy_config: Some("Use the system guardian policy.".to_string()),
-                ..Default::default()
-            },
-        );
-
-        assert_eq!(
-            target.guardian_policy_config,
-            Some(Sourced::new(
-                "Use the system guardian policy.".to_string(),
-                RequirementSource::SystemRequirementsToml {
-                    file: system_requirements_toml_file_for_test()
-                        .expect("system requirements.toml path"),
-                },
-            )),
-        );
-    }
-
-    #[test]
-    fn deserialize_guardian_policy_config() -> Result<()> {
-        let requirements: ConfigRequirementsToml = from_str(
-            r#"
-guardian_policy_config = """
-Use the managed guardian policy.
-"""
-"#,
-        )?;
-
-        assert_eq!(
-            requirements.guardian_policy_config.as_deref(),
-            Some("Use the managed guardian policy.\n")
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn blank_guardian_policy_config_is_empty() -> Result<()> {
-        let requirements: ConfigRequirementsToml = from_str(
-            r#"
-guardian_policy_config = """
-
-"""
-"#,
-        )?;
-
-        assert!(requirements.is_empty());
         Ok(())
     }
 
@@ -2270,17 +2175,13 @@ allowed_approvals_reviewers = ["user"]
     }
 
     #[test]
-    fn deserialize_legacy_allowed_approvals_reviewer() -> Result<()> {
+    fn legacy_allowed_approvals_reviewer_is_rejected() -> Result<()> {
         let toml_str = r#"
-            allowed_approvals_reviewers = ["guardian_subagent", "user"]
+            allowed_approvals_reviewers = ["legacy_auto_reviewer", "user"]
         "#;
-        let config: ConfigRequirementsToml = from_str(toml_str)?;
-        let requirements: ConfigRequirements = with_unknown_source(config).try_into()?;
-
-        assert_eq!(
-            requirements.approvals_reviewer.value(),
-            ApprovalsReviewer::AutoReview
-        );
+        let err = from_str::<ConfigRequirementsToml>(toml_str)
+            .expect_err("legacy auto reviewer value should not deserialize");
+        assert!(err.to_string().contains("unknown variant"));
 
         Ok(())
     }

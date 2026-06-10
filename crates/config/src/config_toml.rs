@@ -111,7 +111,7 @@ pub struct ConfigToml {
     /// ARC.
     pub approvals_reviewer: Option<ApprovalsReviewer>,
 
-    /// Optional policy instructions for the guardian auto-reviewer.
+    /// Optional policy instructions for the auto-reviewer.
     #[serde(default)]
     pub auto_review: Option<AutoReviewToml>,
 
@@ -367,7 +367,7 @@ pub enum ThreadStoreToml {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq, JsonSchema)]
 pub struct AutoReviewToml {
-    /// Additional policy instructions inserted into the guardian prompt.
+    /// Additional policy instructions inserted into the auto-review prompt.
     pub policy: Option<String>,
 }
 

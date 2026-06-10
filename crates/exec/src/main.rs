@@ -70,7 +70,11 @@ fn default_exec_env_policy() -> ExecEnvPolicy {
     ExecEnvPolicy {
         inherit: policy.inherit,
         ignore_default_excludes: policy.ignore_default_excludes,
-        exclude: policy.exclude.into_iter().map(|pattern| pattern.to_string()).collect(),
+        exclude: policy
+            .exclude
+            .into_iter()
+            .map(|pattern| pattern.to_string())
+            .collect(),
         r#set: policy.r#set,
         include_only: policy
             .include_only

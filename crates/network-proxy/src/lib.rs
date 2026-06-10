@@ -7,11 +7,13 @@ use globset::GlobSetBuilder;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::net::Ipv6Addr;
 use std::path::Path;
+use std::sync::Arc;
 use url::Host as UrlHost;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -212,6 +214,14 @@ impl NetworkConfig {
                     .collect()
             })
             .unwrap_or_default()
+    }
+
+    pub fn set_allow_unix_sockets(&mut self, paths: Vec<String>) {
+        let entries = paths
+            .into_iter()
+            .map(|path| (path, NetworkUnixSocketPermission::Allow))
+            .collect();
+        self.unix_sockets = Some(NetworkUnixSocketPermissions { entries });
     }
 
     pub fn upsert_domain_permission(
@@ -784,6 +794,10 @@ impl NetworkProxyState {
         &self.config
     }
 
+    pub fn with_reloader(config: ConfigState, _reloader: Arc<dyn ConfigReloader>) -> Self {
+        Self::new(config).expect("network proxy config should be valid")
+    }
+
     pub fn decide_host(&self, host: &str, method: Option<&str>) -> NetworkPolicyDecision {
         if let Some(method) = method
             && !self.config.network.mode.allows_method(method)
@@ -804,6 +818,156 @@ impl NetworkProxyState {
         NetworkPolicyDecision::Deny {
             reason: "blocked-by-allowlist".to_string(),
         }
+    }
+}
+
+pub type ConfigState = NetworkProxyConfig;
+
+#[async_trait::async_trait]
+pub trait ConfigReloader: Send + Sync {
+    fn source_label(&self) -> String;
+
+    async fn maybe_reload(&self) -> Result<Option<ConfigState>>;
+
+    async fn reload_now(&self) -> Result<ConfigState>;
+}
+
+pub fn build_config_state(
+    config: NetworkProxyConfig,
+    constraints: NetworkProxyConstraints,
+) -> Result<ConfigState> {
+    validate_policy_against_constraints(&config, &constraints)?;
+    Ok(config)
+}
+
+pub const PROXY_URL_ENV_KEYS: &[&str] = &[
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "WS_PROXY",
+    "WSS_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "ws_proxy",
+    "wss_proxy",
+];
+
+pub const ALLOW_LOCAL_BINDING_ENV_KEY: &str = "CODEX_NETWORK_ALLOW_LOCAL_BINDING";
+
+pub fn proxy_url_env_value<'a>(env: &'a HashMap<String, String>, key: &str) -> Option<&'a str> {
+    env.get(key).map(String::as_str)
+}
+
+pub fn has_proxy_url_env_vars(env: &HashMap<String, String>) -> bool {
+    PROXY_URL_ENV_KEYS
+        .iter()
+        .any(|key| env.get(*key).is_some_and(|value| !value.trim().is_empty()))
+}
+
+#[derive(Clone, Debug)]
+pub struct NetworkProxy {
+    state: Arc<NetworkProxyState>,
+    managed_by_codex: bool,
+    managed_mitm_ca_trust_bundle_path: Option<utils_absolute_path::AbsolutePathBuf>,
+}
+
+impl NetworkProxy {
+    pub fn builder() -> NetworkProxyBuilder {
+        NetworkProxyBuilder::default()
+    }
+
+    pub fn apply_to_env(&self, env: &mut HashMap<String, String>) {
+        let config = self.state.config();
+        if !config.network.enabled {
+            return;
+        }
+
+        if !config.network.proxy_url.trim().is_empty() {
+            for key in [
+                "HTTP_PROXY",
+                "HTTPS_PROXY",
+                "ALL_PROXY",
+                "http_proxy",
+                "https_proxy",
+                "all_proxy",
+            ] {
+                env.insert(key.to_string(), config.network.proxy_url.clone());
+            }
+        }
+
+        if config.network.enable_socks5 && !config.network.socks_url.trim().is_empty() {
+            for key in ["ALL_PROXY", "all_proxy"] {
+                env.insert(key.to_string(), config.network.socks_url.clone());
+            }
+        }
+
+        if config.network.allow_local_binding {
+            env.insert(ALLOW_LOCAL_BINDING_ENV_KEY.to_string(), "1".to_string());
+        }
+    }
+
+    pub fn dangerously_allow_all_unix_sockets(&self) -> bool {
+        self.state
+            .config()
+            .network
+            .dangerously_allow_all_unix_sockets
+    }
+
+    pub fn allow_unix_sockets(&self) -> Vec<String> {
+        self.state.config().network.allow_unix_sockets()
+    }
+
+    pub fn allow_local_binding(&self) -> bool {
+        self.state.config().network.allow_local_binding
+    }
+
+    pub fn managed_mitm_ca_trust_bundle_path(
+        &self,
+    ) -> Option<utils_absolute_path::AbsolutePathBuf> {
+        self.managed_mitm_ca_trust_bundle_path.clone()
+    }
+
+    pub fn managed_by_codex(&self) -> bool {
+        self.managed_by_codex
+    }
+}
+
+#[derive(Default)]
+pub struct NetworkProxyBuilder {
+    state: Option<Arc<NetworkProxyState>>,
+    managed_by_codex: bool,
+    managed_mitm_ca_trust_bundle_path: Option<utils_absolute_path::AbsolutePathBuf>,
+}
+
+impl NetworkProxyBuilder {
+    pub fn state(mut self, state: Arc<NetworkProxyState>) -> Self {
+        self.state = Some(state);
+        self
+    }
+
+    pub fn managed_by_codex(mut self, managed_by_codex: bool) -> Self {
+        self.managed_by_codex = managed_by_codex;
+        self
+    }
+
+    pub fn managed_mitm_ca_trust_bundle_path(
+        mut self,
+        path: Option<utils_absolute_path::AbsolutePathBuf>,
+    ) -> Self {
+        self.managed_mitm_ca_trust_bundle_path = path;
+        self
+    }
+
+    pub async fn build(self) -> Result<NetworkProxy> {
+        let state = self
+            .state
+            .ok_or_else(|| anyhow::anyhow!("network proxy state is required"))?;
+        Ok(NetworkProxy {
+            state,
+            managed_by_codex: self.managed_by_codex,
+            managed_mitm_ca_trust_bundle_path: self.managed_mitm_ca_trust_bundle_path,
+        })
     }
 }
 

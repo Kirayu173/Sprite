@@ -1,0 +1,7 @@
+load("//:defs.bzl", "sprite_rust_crate")
+
+sprite_rust_crate(
+    name = "execpolicy-legacy",
+    crate_name = "sprite_execpolicy_legacy",
+    compile_data = ["src/default.policy"],
+)

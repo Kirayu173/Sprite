@@ -1,0 +1,6 @@
+load("//:defs.bzl", "sprite_rust_crate")
+
+sprite_rust_crate(
+    name = "process-hardening",
+    crate_name = "process_hardening",
+)

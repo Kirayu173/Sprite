@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "runtime-core"
 version.workspace = true
 edition.workspace = true
@@ -12,18 +12,26 @@ default = []
 runtime-diagnostics = ["dep:diagnostics", "dep:rollout-trace"]
 
 [dependencies]
+anyhow = { workspace = true }
+arc-swap = { workspace = true }
 config = { workspace = true }
 diagnostics = { workspace = true, optional = true }
+dunce = { workspace = true }
 exec-server = { workspace = true }
+execpolicy = { workspace = true }
+futures = { workspace = true }
+network-proxy = { workspace = true }
 rollout = { workspace = true }
 rollout-trace = { workspace = true, optional = true }
 runtime-protocol = { workspace = true }
+sandboxing = { workspace = true }
 shell-command = { workspace = true }
 state = { workspace = true }
 thread-store = { workspace = true }
 utils-absolute-path = { workspace = true }
 utils-output-truncation = { workspace = true }
 utils-pty = { workspace = true }
+windows-sandbox = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 similar = { workspace = true }
@@ -31,6 +39,7 @@ thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs", "macros", "process", "rt", "sync", "time"] }
 tokio-util = { workspace = true }
 toml = { workspace = true }
+toml_edit = { workspace = true }
 tracing = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 

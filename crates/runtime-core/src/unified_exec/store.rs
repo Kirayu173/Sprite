@@ -38,7 +38,8 @@ impl ProcessStore {
     }
 
     pub(super) fn insert_process(&mut self, process_id: i32, process: Arc<dyn ExecProcess>) {
-        self.processes.insert(process_id, ProcessEntry::new(process));
+        self.processes
+            .insert(process_id, ProcessEntry::new(process));
     }
 
     pub(super) fn remove_process(
