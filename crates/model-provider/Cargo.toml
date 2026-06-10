@@ -1,0 +1,23 @@
+[package]
+name = "model-provider"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "model_provider"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+model-catalog = { workspace = true }
+model-provider-info = { workspace = true }
+model-runtime = { workspace = true }
+provider-anthropic-compatible = { workspace = true }
+provider-lmstudio = { workspace = true }
+provider-ollama = { workspace = true }
+provider-openai-compatible = { workspace = true }
+thiserror = { workspace = true }

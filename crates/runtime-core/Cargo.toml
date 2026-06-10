@@ -24,9 +24,13 @@ file-system = { workspace = true }
 file-watcher = { workspace = true }
 futures = { workspace = true }
 git-utils = { workspace = true }
+model-provider = { workspace = true }
+model-provider-info = { workspace = true }
+model-runtime = { workspace = true }
 network-proxy = { workspace = true }
 rollout = { workspace = true }
 rollout-trace = { workspace = true, optional = true }
+regex = { workspace = true }
 runtime-protocol = { workspace = true }
 sandboxing = { workspace = true }
 shell-command = { workspace = true }

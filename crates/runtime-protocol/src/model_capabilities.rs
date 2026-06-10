@@ -170,20 +170,6 @@ pub struct ReasoningEffortPreset {
     pub description: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, TS, JsonSchema, PartialEq)]
-pub struct ModelUpgrade {
-    pub id: String,
-    pub migration_config_key: String,
-    pub model_link: Option<String>,
-    pub upgrade_copy: Option<String>,
-    pub migration_markdown: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, TS, JsonSchema, PartialEq, Eq)]
-pub struct ModelAvailabilityNux {
-    pub message: String,
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize, TS, JsonSchema, PartialEq, Eq)]
 pub struct ModelServiceTier {
     pub id: String,
@@ -218,19 +204,8 @@ pub struct ModelPreset {
     /// Catalog default service tier id for this model.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default_service_tier: Option<String>,
-    /// Whether this is the default model for new users.
-    pub is_default: bool,
-    /// Sprite-owned migration target metadata for model catalog transitions.
-    ///
-    /// This is catalog guidance for local/runtime model migrations, not
-    /// account billing, upsell, or official provider product state.
-    pub upgrade: Option<ModelUpgrade>,
     /// Whether this preset should appear in the picker UI.
     pub show_in_picker: bool,
-    /// Sprite-owned availability announcement shown by local clients.
-    ///
-    /// This is provider-neutral catalog metadata, not account entitlement state.
-    pub availability_nux: Option<ModelAvailabilityNux>,
     /// Whether this model is available through the configured provider catalog.
     #[serde(alias = "supported_in_api")]
     pub provider_available: bool,
@@ -369,10 +344,6 @@ pub struct ModelInfo {
     pub service_tiers: Vec<ModelServiceTier>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default_service_tier: Option<String>,
-    /// Sprite-owned availability announcement shown by local clients.
-    pub availability_nux: Option<ModelAvailabilityNux>,
-    /// Sprite-owned migration metadata for local/runtime model transitions.
-    pub upgrade: Option<ModelInfoUpgrade>,
     pub base_instructions: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_messages: Option<ModelMessages>,
@@ -535,21 +506,6 @@ impl ModelInstructionsVariables {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, TS, JsonSchema)]
-pub struct ModelInfoUpgrade {
-    pub model: String,
-    pub migration_markdown: String,
-}
-
-impl From<&ModelUpgrade> for ModelInfoUpgrade {
-    fn from(upgrade: &ModelUpgrade) -> Self {
-        ModelInfoUpgrade {
-            model: upgrade.id.clone(),
-            migration_markdown: upgrade.migration_markdown.clone().unwrap_or_default(),
-        }
-    }
-}
-
 /// Response wrapper for `/models`.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, TS, JsonSchema, Default)]
 pub struct ModelsResponse {
@@ -573,17 +529,7 @@ impl From<ModelInfo> for ModelPreset {
             additional_speed_tiers: info.additional_speed_tiers,
             service_tiers: info.service_tiers,
             default_service_tier: info.default_service_tier,
-            is_default: false, // default is the highest priority available model
-            upgrade: info.upgrade.as_ref().map(|upgrade| ModelUpgrade {
-                id: upgrade.model.clone(),
-                migration_config_key: info.slug.clone(),
-                // todo(aibrahim): add the model link here.
-                model_link: None,
-                upgrade_copy: None,
-                migration_markdown: Some(upgrade.migration_markdown.clone()),
-            }),
             show_in_picker: info.visibility == ModelVisibility::List,
-            availability_nux: info.availability_nux,
             provider_available: info.provider_available,
             input_modalities: info.input_modalities,
         }
@@ -628,20 +574,6 @@ impl ModelPreset {
             .filter(|model| include_provider_unavailable_models || model.provider_available)
             .collect()
     }
-
-    /// Recompute the single default preset using picker visibility.
-    ///
-    /// The first picker-visible model wins; if none are picker-visible, the first model wins.
-    pub fn mark_default_by_picker_visibility(models: &mut [ModelPreset]) {
-        for preset in models.iter_mut() {
-            preset.is_default = false;
-        }
-        if let Some(default) = models.iter_mut().find(|preset| preset.show_in_picker) {
-            default.is_default = true;
-        } else if let Some(default) = models.first_mut() {
-            default.is_default = true;
-        }
-    }
 }
 
 #[cfg(test)]
@@ -665,8 +597,6 @@ mod tests {
             additional_speed_tiers: Vec::new(),
             service_tiers: Vec::new(),
             default_service_tier: None,
-            availability_nux: None,
-            upgrade: None,
             base_instructions: "base".to_string(),
             model_messages: spec,
             supports_reasoning_summaries: false,
@@ -913,7 +843,7 @@ mod tests {
     }
 
     #[test]
-    fn model_info_defaults_availability_nux_to_none_when_omitted() {
+    fn model_info_deserializes_without_catalog_migration_metadata() {
         let model: ModelInfo = serde_json::from_value(serde_json::json!({
             "slug": "test-model",
             "display_name": "Test Model",
@@ -923,7 +853,6 @@ mod tests {
             "visibility": "list",
             "supported_in_api": true,
             "priority": 1,
-            "upgrade": null,
             "base_instructions": "base",
             "model_messages": null,
             "supports_reasoning_summaries": false,
@@ -945,7 +874,6 @@ mod tests {
         }))
         .expect("deserialize model info");
 
-        assert_eq!(model.availability_nux, None);
         assert!(model.provider_available);
         assert!(!model.supports_image_detail_original);
         assert_eq!(model.web_search_tool_type, WebSearchToolType::Text);
@@ -1044,23 +972,14 @@ mod tests {
     }
 
     #[test]
-    fn model_preset_preserves_availability_nux() {
+    fn model_preset_preserves_speed_tier_metadata() {
         let preset = ModelPreset::from(ModelInfo {
-            availability_nux: Some(ModelAvailabilityNux {
-                message: "Try Spark.".to_string(),
-            }),
             additional_speed_tiers: vec![SPEED_TIER_FAST.to_string()],
             default_service_tier: Some(ServiceTier::Fast.request_value().to_string()),
             service_tiers: Vec::new(),
             ..test_model(/*spec*/ None)
         });
 
-        assert_eq!(
-            preset.availability_nux,
-            Some(ModelAvailabilityNux {
-                message: "Try Spark.".to_string(),
-            })
-        );
         assert!(preset.supports_fast_mode());
         assert_eq!(
             preset.default_service_tier,

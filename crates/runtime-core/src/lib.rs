@@ -5,6 +5,8 @@ pub mod diagnostics;
 pub mod exec;
 pub mod exec_env;
 pub mod exec_policy;
+pub mod model;
+pub mod model_event_postprocess;
 pub mod network_policy_decision;
 pub mod persistence;
 pub mod project;

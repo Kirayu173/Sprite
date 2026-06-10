@@ -35,6 +35,7 @@ use model_provider_info::OLLAMA_CHAT_PROVIDER_REMOVED_ERROR;
 use model_provider_info::OLLAMA_OSS_PROVIDER_ID;
 use model_provider_info::OPENAI_COMPATIBLE_PROVIDER_ID;
 use model_provider_info::built_in_model_providers;
+use model_provider_info::default_model_for_provider;
 use model_provider_info::merge_configured_model_providers;
 use runtime_protocol::config_types::AutoCompactTokenLimitScope;
 use runtime_protocol::config_types::SandboxMode;
@@ -49,7 +50,7 @@ use toml::Value as TomlValue;
 use utils_absolute_path::AbsolutePathBuf;
 use utils_absolute_path::AbsolutePathBufGuard;
 
-pub const DEFAULT_MODEL: &str = "gpt-oss";
+pub const DEFAULT_MODEL: &str = model_provider_info::DEFAULT_OLLAMA_MODEL;
 pub const DEFAULT_MODEL_PROVIDER_ID: &str = OLLAMA_OSS_PROVIDER_ID;
 
 #[derive(Debug, Default)]
@@ -354,11 +355,28 @@ impl RuntimeConfig {
             raw.web_search.unwrap_or_default(),
         )?;
 
+        let model = raw.model.clone().unwrap_or_else(|| {
+            if matches!(
+                model_provider_id.as_str(),
+                OLLAMA_OSS_PROVIDER_ID | LMSTUDIO_OSS_PROVIDER_ID
+            ) {
+                if let Some(model) = raw
+                    .local_provider_default_model
+                    .clone()
+                    .filter(|model| !model.trim().is_empty())
+                {
+                    return model;
+                }
+                tracing::warn!(
+                    provider = %model_provider_id,
+                    "No `model` or `local_provider_default_model` was configured; falling back to the built-in local provider default."
+                );
+            }
+            default_model_for_provider(&model_provider_id).to_string()
+        });
+
         Ok(Self {
-            model: raw
-                .model
-                .clone()
-                .unwrap_or_else(|| DEFAULT_MODEL.to_string()),
+            model,
             review_model: raw.review_model.clone(),
             model_context_window: raw.model_context_window,
             model_auto_compact_token_limit: raw.model_auto_compact_token_limit,

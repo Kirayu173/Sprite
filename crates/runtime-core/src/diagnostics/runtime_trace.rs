@@ -192,7 +192,7 @@ mod tests {
             session_source: SessionSource::Exec,
             cwd,
             rollout_path: None,
-            model: "gpt-oss".to_string(),
+            model: config::DEFAULT_MODEL.to_string(),
             provider_name: "ollama".to_string(),
             approval_policy: AskForApproval::Never,
             permission_profile: PermissionProfile::read_only(),

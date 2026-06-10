@@ -2426,7 +2426,7 @@ mod tests {
                     approvals_reviewer: v2::ApprovalsReviewer::User,
                     sandbox_policy: v2::SandboxPolicy::DangerFullAccess,
                     active_permission_profile: None,
-                    model: "gpt-5.4".to_string(),
+                    model: "sprite-model".to_string(),
                     model_provider: "sprite".to_string(),
                     service_tier: None,
                     effort: None,
@@ -2434,7 +2434,7 @@ mod tests {
                     collaboration_mode: runtime_protocol::config_types::CollaborationMode {
                         mode: runtime_protocol::config_types::ModeKind::Default,
                         settings: runtime_protocol::config_types::Settings {
-                            model: "gpt-5.4".to_string(),
+                            model: "sprite-model".to_string(),
                             reasoning_effort: None,
                             developer_instructions: None,
                         },

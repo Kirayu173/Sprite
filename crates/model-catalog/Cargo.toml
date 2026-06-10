@@ -1,0 +1,22 @@
+[package]
+name = "model-catalog"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "model_catalog"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+runtime-protocol = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }

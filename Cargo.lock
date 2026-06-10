@@ -856,6 +856,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "data-encoding"
+version = "2.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4ae5f15dda3c708c0ade84bfee31ccab44a3da4f88015ed22f63732abe300c8"
+
+[[package]]
 name = "debugserver-types"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2705,6 +2711,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "model-catalog"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "runtime-protocol",
+ "serde",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
+name = "model-provider"
+version = "0.1.0"
+dependencies = [
+ "model-catalog",
+ "model-provider-info",
+ "model-runtime",
+ "provider-anthropic-compatible",
+ "provider-lmstudio",
+ "provider-ollama",
+ "provider-openai-compatible",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "model-provider-info"
 version = "0.1.0"
 dependencies = [
@@ -2718,6 +2749,26 @@ dependencies = [
  "thiserror 2.0.18",
  "toml",
  "utils-absolute-path",
+]
+
+[[package]]
+name = "model-runtime"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "http",
+ "model-catalog",
+ "model-provider-info",
+ "reqwest",
+ "runtime-protocol",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-stream",
+ "tokio-tungstenite",
 ]
 
 [[package]]
@@ -3588,6 +3639,78 @@ dependencies = [
 ]
 
 [[package]]
+name = "provider-anthropic-compatible"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "futures",
+ "model-provider-info",
+ "model-runtime",
+ "pretty_assertions",
+ "reqwest",
+ "runtime-protocol",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
+name = "provider-lmstudio"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "http",
+ "model-catalog",
+ "model-provider-info",
+ "model-runtime",
+ "provider-openai-compatible",
+ "runtime-protocol",
+ "serde_json",
+ "tokio",
+ "which",
+]
+
+[[package]]
+name = "provider-ollama"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "http",
+ "model-catalog",
+ "model-provider-info",
+ "model-runtime",
+ "provider-openai-compatible",
+ "runtime-protocol",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "provider-openai-compatible"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "http",
+ "model-catalog",
+ "model-provider-info",
+ "model-runtime",
+ "pretty_assertions",
+ "runtime-protocol",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "url",
+]
+
+[[package]]
 name = "psl-types"
 version = "2.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3960,12 +4083,14 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-rustls",
+ "tokio-util",
  "tower",
  "tower-http",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "webpki-roots",
 ]
@@ -4103,7 +4228,11 @@ dependencies = [
  "file-watcher",
  "futures",
  "git-utils",
+ "model-provider",
+ "model-provider-info",
+ "model-runtime",
  "network-proxy",
+ "regex",
  "rollout",
  "rollout-trace",
  "runtime-protocol",
@@ -5651,6 +5780,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-tungstenite"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edc5f74e248dc973e0dbb7b74c7e0d6fcc301c694ff50049504004ef4d0cdcd9"
+dependencies = [
+ "futures-util",
+ "log",
+ "tokio",
+ "tungstenite",
+]
+
+[[package]]
 name = "tokio-util"
 version = "0.7.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5967,6 +6108,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "tungstenite"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18e5b8366ee7a95b16d32197d0b2604b43a0be89dc5fac9f8e96ccafbaedda8a"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "data-encoding",
+ "http",
+ "httparse",
+ "log",
+ "rand 0.8.6",
+ "sha1",
+ "thiserror 1.0.69",
+ "utf-8",
+]
+
+[[package]]
 name = "typenum"
 version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6064,6 +6223,12 @@ dependencies = [
  "serde",
  "serde_derive",
 ]
+
+[[package]]
+name = "utf-8"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
 
 [[package]]
 name = "utf8_iter"
@@ -6347,6 +6512,19 @@ dependencies = [
  "indexmap 2.14.0",
  "wasm-encoder",
  "wasmparser",
+]
+
+[[package]]
+name = "wasm-streams"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15053d8d85c7eccdbefef60f06769760a563c7f0a9d6902a13d35c7800b0ad65"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

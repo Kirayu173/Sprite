@@ -15,8 +15,15 @@ members = [
     "crates/runtime-protocol",
     "crates/app-protocol",
     "crates/model-provider-info",
+    "crates/model-catalog",
+    "crates/model-provider",
+    "crates/model-runtime",
     "crates/config",
     "crates/runtime-core",
+    "crates/provider-anthropic-compatible",
+    "crates/provider-openai-compatible",
+    "crates/provider-ollama",
+    "crates/provider-lmstudio",
     "crates/utils/json-to-toml",
     "crates/utils/home-dir",
     "crates/utils/absolute-path",
@@ -66,8 +73,15 @@ file-search = { path = "crates/file-search" }
 file-watcher = { path = "crates/file-watcher" }
 git-utils = { path = "crates/git-utils" }
 install-context = { path = "crates/install-context" }
+model-catalog = { path = "crates/model-catalog" }
+model-provider = { path = "crates/model-provider" }
 model-provider-info = { path = "crates/model-provider-info" }
+model-runtime = { path = "crates/model-runtime" }
 network-proxy = { path = "crates/network-proxy" }
+provider-anthropic-compatible = { path = "crates/provider-anthropic-compatible" }
+provider-lmstudio = { path = "crates/provider-lmstudio" }
+provider-ollama = { path = "crates/provider-ollama" }
+provider-openai-compatible = { path = "crates/provider-openai-compatible" }
 process-hardening = { package = "sprite-process-hardening", path = "crates/process-hardening" }
 experimental-api-macros = { path = "crates/experimental-api-macros" }
 agent-graph-store = { path = "crates/agent-graph-store" }
@@ -174,6 +188,7 @@ tempfile = "3.23.0"
 thiserror = "2.0.17"
 time = "0.3"
 tokio = "1"
+tokio-tungstenite = "0.24"
 tokio-stream = "0.1.17"
 tokio-util = "0.7.18"
 toml = "0.9.8"

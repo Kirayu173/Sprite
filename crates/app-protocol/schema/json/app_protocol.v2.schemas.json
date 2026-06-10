@@ -6080,17 +6080,6 @@
           },
           "type": "array"
         },
-        "availabilityNux": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ModelAvailabilityNux"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Sprite-owned availability announcement shown by local clients."
-        },
         "defaultReasoningEffort": {
           "$ref": "#/definitions/ReasoningEffort"
         },
@@ -6124,9 +6113,6 @@
           },
           "type": "array"
         },
-        "isDefault": {
-          "type": "boolean"
-        },
         "model": {
           "type": "string"
         },
@@ -6146,24 +6132,6 @@
         "supportsPersonality": {
           "default": false,
           "type": "boolean"
-        },
-        "upgrade": {
-          "description": "Sprite-owned model migration target for local/runtime catalog transitions.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "upgradeInfo": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ModelUpgradeInfo"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Sprite-owned model migration details, not billing or provider account state."
         }
       },
       "required": [
@@ -6172,20 +6140,8 @@
         "displayName",
         "hidden",
         "id",
-        "isDefault",
         "model",
         "supportedReasoningEfforts"
-      ],
-      "type": "object"
-    },
-    "ModelAvailabilityNux": {
-      "properties": {
-        "message": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "message"
       ],
       "type": "object"
     },
@@ -6319,36 +6275,6 @@
         "description",
         "id",
         "name"
-      ],
-      "type": "object"
-    },
-    "ModelUpgradeInfo": {
-      "properties": {
-        "migrationMarkdown": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "model": {
-          "type": "string"
-        },
-        "modelLink": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "upgradeCopy": {
-          "description": "Optional Sprite-owned copy for local model migration UI.",
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "model"
       ],
       "type": "object"
     },

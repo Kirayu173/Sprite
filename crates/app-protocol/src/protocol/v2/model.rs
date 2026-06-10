@@ -1,6 +1,5 @@
 use super::shared::v2_enum_from_core;
 use runtime_protocol::model_capabilities::InputModality;
-use runtime_protocol::model_capabilities::ModelAvailabilityNux as CoreModelAvailabilityNux;
 use runtime_protocol::model_capabilities::ReasoningEffort;
 use runtime_protocol::model_capabilities::default_input_modalities;
 use runtime_protocol::protocol::ModelRerouteReason as CoreModelRerouteReason;
@@ -57,21 +56,6 @@ pub struct ModelListParams {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
-pub struct ModelAvailabilityNux {
-    pub message: String,
-}
-
-impl From<CoreModelAvailabilityNux> for ModelAvailabilityNux {
-    fn from(value: CoreModelAvailabilityNux) -> Self {
-        Self {
-            message: value.message,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export_to = "v2/")]
 pub struct ModelServiceTier {
     pub id: String,
     pub name: String,
@@ -84,12 +68,6 @@ pub struct ModelServiceTier {
 pub struct Model {
     pub id: String,
     pub model: String,
-    /// Sprite-owned model migration target for local/runtime catalog transitions.
-    pub upgrade: Option<String>,
-    /// Sprite-owned model migration details, not billing or provider account state.
-    pub upgrade_info: Option<ModelUpgradeInfo>,
-    /// Sprite-owned availability announcement shown by local clients.
-    pub availability_nux: Option<ModelAvailabilityNux>,
     pub display_name: String,
     pub description: String,
     pub hidden: bool,
@@ -107,19 +85,6 @@ pub struct Model {
     /// Catalog default service tier id for this model, when one is configured.
     #[serde(default)]
     pub default_service_tier: Option<String>,
-    // Only one model should be marked as default.
-    pub is_default: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export_to = "v2/")]
-pub struct ModelUpgradeInfo {
-    pub model: String,
-    /// Optional Sprite-owned copy for local model migration UI.
-    pub upgrade_copy: Option<String>,
-    pub model_link: Option<String>,
-    pub migration_markdown: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]

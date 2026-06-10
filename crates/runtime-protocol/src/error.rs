@@ -311,8 +311,7 @@ pub struct UnexpectedResponseError {
     pub identity_error_code: Option<String>,
 }
 
-const CLOUDFLARE_BLOCKED_MESSAGE: &str =
-    "Access blocked by Cloudflare. This usually happens when connecting from a restricted region";
+const GATEWAY_BLOCKED_MESSAGE: &str = "Access blocked by an upstream gateway. This usually happens when the provider blocks the current network or region";
 const UNEXPECTED_RESPONSE_BODY_MAX_BYTES: usize = 1000;
 
 impl UnexpectedResponseError {
@@ -348,12 +347,13 @@ impl UnexpectedResponseError {
             return None;
         }
 
-        if !self.body.contains("Cloudflare") || !self.body.contains("blocked") {
+        let body = self.body.to_ascii_lowercase();
+        if !body.contains("blocked") {
             return None;
         }
 
         let status = self.status;
-        let mut message = format!("{CLOUDFLARE_BLOCKED_MESSAGE} (status {status})");
+        let mut message = format!("{GATEWAY_BLOCKED_MESSAGE} (status {status})");
         if let Some(url) = &self.url {
             message.push_str(&format!(", url: {url}"));
         }

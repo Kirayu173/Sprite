@@ -28,14 +28,8 @@ const MAX_REQUEST_MAX_RETRIES: u64 = 100;
 
 const OPENAI_COMPATIBLE_PROVIDER_NAME: &str = "OpenAI-compatible";
 pub const OPENAI_COMPATIBLE_PROVIDER_ID: &str = "openai-compatible";
-const AMAZON_BEDROCK_PROVIDER_NAME: &str = "Amazon Bedrock";
-pub const AMAZON_BEDROCK_PROVIDER_ID: &str = "amazon-bedrock";
-pub const AMAZON_BEDROCK_GPT_5_5_MODEL_ID: &str = "openai.gpt-5.5";
-pub const AMAZON_BEDROCK_GPT_5_4_MODEL_ID: &str = "openai.gpt-5.4";
-pub const AMAZON_BEDROCK_DEFAULT_BASE_URL: &str =
-    "https://bedrock-mantle.us-east-1.api.aws/openai/v1";
-const AMAZON_BEDROCK_MANTLE_CLIENT_AGENT_HEADER: &str = "x-amzn-mantle-client-agent";
-const AMAZON_BEDROCK_MANTLE_CLIENT_AGENT_VALUE: &str = "sprite";
+const ANTHROPIC_COMPATIBLE_PROVIDER_NAME: &str = "Anthropic-compatible";
+pub const ANTHROPIC_COMPATIBLE_PROVIDER_ID: &str = "anthropic-compatible";
 const CHAT_WIRE_API_REMOVED_ERROR: &str = "`wire_api = \"chat\"` is no longer supported. Set `wire_api = \"responses\"` in your provider config.";
 pub const LEGACY_OLLAMA_CHAT_PROVIDER_ID: &str = "ollama-chat";
 pub const OLLAMA_CHAT_PROVIDER_REMOVED_ERROR: &str =
@@ -79,15 +73,19 @@ pub struct ApiRetryConfig {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum WireApi {
-    /// The Responses API exposed by OpenAI at `/v1/responses`.
+    /// A Responses-style API exposed at `/v1/responses`.
     #[default]
     Responses,
+    /// The Messages API exposed by Anthropic-compatible providers at `/v1/messages`.
+    #[serde(rename = "anthropic-compatible")]
+    AnthropicCompatible,
 }
 
 impl fmt::Display for WireApi {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let value = match self {
             Self::Responses => "responses",
+            Self::AnthropicCompatible => "anthropic-compatible",
         };
         f.write_str(value)
     }
@@ -101,8 +99,12 @@ impl<'de> Deserialize<'de> for WireApi {
         let value = String::deserialize(deserializer)?;
         match value.as_str() {
             "responses" => Ok(Self::Responses),
+            "anthropic-compatible" => Ok(Self::AnthropicCompatible),
             "chat" => Err(serde::de::Error::custom(CHAT_WIRE_API_REMOVED_ERROR)),
-            _ => Err(serde::de::Error::unknown_variant(&value, &["responses"])),
+            _ => Err(serde::de::Error::unknown_variant(
+                &value,
+                &["responses", "anthropic-compatible"],
+            )),
         }
     }
 }
@@ -128,8 +130,6 @@ pub struct ModelProviderInfo {
     pub experimental_bearer_token: Option<String>,
     /// Command-backed bearer-token configuration for this provider.
     pub auth: Option<ModelProviderAuthInfo>,
-    /// AWS SigV4 auth configuration for this provider.
-    pub aws: Option<ModelProviderAwsAuthInfo>,
     /// Which wire protocol this provider expects.
     #[serde(default)]
     pub wire_api: WireApi,
@@ -158,44 +158,8 @@ pub struct ModelProviderInfo {
     pub supports_websockets: bool,
 }
 
-/// AWS SigV4 auth configuration for a model provider.
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
-#[schemars(deny_unknown_fields)]
-pub struct ModelProviderAwsAuthInfo {
-    /// AWS profile name to use. When unset, the AWS SDK default chain decides.
-    pub profile: Option<String>,
-    /// AWS region to use for provider-specific endpoints.
-    pub region: Option<String>,
-}
-
 impl ModelProviderInfo {
     pub fn validate(&self) -> std::result::Result<(), String> {
-        if self.aws.is_some() {
-            if self.supports_websockets {
-                // TODO(celia-oai): Support AWS SigV4 signing for WebSocket
-                // upgrade requests before allowing AWS-authenticated providers
-                // to enable Responses-over-WebSocket.
-                return Err("provider aws cannot be combined with supports_websockets".to_string());
-            }
-
-            let mut conflicts = Vec::new();
-            if self.env_key.is_some() {
-                conflicts.push("env_key");
-            }
-            if self.experimental_bearer_token.is_some() {
-                conflicts.push("experimental_bearer_token");
-            }
-            if self.auth.is_some() {
-                conflicts.push("auth");
-            }
-            if !conflicts.is_empty() {
-                return Err(format!(
-                    "provider aws cannot be combined with {}",
-                    conflicts.join(", ")
-                ));
-            }
-        }
-
         let Some(auth) = self.auth.as_ref() else {
             return Ok(());
         };
@@ -330,7 +294,6 @@ impl ModelProviderInfo {
             env_key_instructions: None,
             experimental_bearer_token: None,
             auth: None,
-            aws: None,
             wire_api: WireApi::Responses,
             query_params: None,
             http_headers: Some(
@@ -348,26 +311,17 @@ impl ModelProviderInfo {
         }
     }
 
-    pub fn create_amazon_bedrock_provider(
-        aws: Option<ModelProviderAwsAuthInfo>,
-    ) -> ModelProviderInfo {
+    pub fn create_anthropic_compatible_provider(base_url: Option<String>) -> ModelProviderInfo {
         ModelProviderInfo {
-            name: AMAZON_BEDROCK_PROVIDER_NAME.into(),
-            base_url: Some(AMAZON_BEDROCK_DEFAULT_BASE_URL.into()),
+            name: ANTHROPIC_COMPATIBLE_PROVIDER_NAME.into(),
+            base_url,
             env_key: None,
             env_key_instructions: None,
             experimental_bearer_token: None,
             auth: None,
-            aws: Some(aws.unwrap_or(ModelProviderAwsAuthInfo {
-                profile: None,
-                region: None,
-            })),
-            wire_api: WireApi::Responses,
+            wire_api: WireApi::AnthropicCompatible,
             query_params: None,
-            http_headers: Some(HashMap::from([(
-                AMAZON_BEDROCK_MANTLE_CLIENT_AGENT_HEADER.to_string(),
-                AMAZON_BEDROCK_MANTLE_CLIENT_AGENT_VALUE.to_string(),
-            )])),
+            http_headers: None,
             env_http_headers: None,
             request_max_retries: None,
             stream_max_retries: None,
@@ -381,8 +335,8 @@ impl ModelProviderInfo {
         self.name == OPENAI_COMPATIBLE_PROVIDER_NAME
     }
 
-    pub fn is_amazon_bedrock(&self) -> bool {
-        self.name == AMAZON_BEDROCK_PROVIDER_NAME
+    pub fn is_anthropic_compatible(&self) -> bool {
+        self.name == ANTHROPIC_COMPATIBLE_PROVIDER_NAME
     }
 
     pub fn supports_remote_compaction(&self) -> bool {
@@ -396,6 +350,9 @@ impl ModelProviderInfo {
 
 pub const DEFAULT_LMSTUDIO_PORT: u16 = 1234;
 pub const DEFAULT_OLLAMA_PORT: u16 = 11434;
+pub const DEFAULT_OPENAI_COMPATIBLE_MODEL: &str = "default";
+pub const DEFAULT_OLLAMA_MODEL: &str = "gpt-oss:20b";
+pub const DEFAULT_LMSTUDIO_MODEL: &str = "openai/gpt-oss-20b";
 
 pub const LMSTUDIO_OSS_PROVIDER_ID: &str = "lmstudio";
 pub const OLLAMA_OSS_PROVIDER_ID: &str = "ollama";
@@ -413,11 +370,11 @@ pub fn built_in_model_providers(
         (OPENAI_COMPATIBLE_PROVIDER_ID, openai_compatible_provider),
         (
             OLLAMA_OSS_PROVIDER_ID,
-            create_oss_provider(DEFAULT_OLLAMA_PORT, WireApi::Responses),
+            create_local_provider("Ollama", DEFAULT_OLLAMA_PORT, WireApi::Responses),
         ),
         (
             LMSTUDIO_OSS_PROVIDER_ID,
-            create_oss_provider(DEFAULT_LMSTUDIO_PORT, WireApi::Responses),
+            create_local_provider("LM Studio", DEFAULT_LMSTUDIO_PORT, WireApi::Responses),
         ),
     ]
     .into_iter()
@@ -440,9 +397,13 @@ pub fn merge_configured_model_providers(
     Ok(model_providers)
 }
 
-pub fn create_oss_provider(default_provider_port: u16, wire_api: WireApi) -> ModelProviderInfo {
-    // These SPRITE_OSS_ environment variables are a temporary compatibility
-    // bridge until local provider settings are fully driven by config.toml.
+pub fn create_local_provider(
+    provider_name: &str,
+    default_provider_port: u16,
+    wire_api: WireApi,
+) -> ModelProviderInfo {
+    // These SPRITE_OSS_ environment variables remain a compatibility bridge
+    // for base URL selection. Model selection should come from config.toml.
     let default_oss_base_url = format!(
         "http://localhost:{oss_port}/v1",
         oss_port = std::env::var("SPRITE_OSS_PORT")
@@ -456,18 +417,21 @@ pub fn create_oss_provider(default_provider_port: u16, wire_api: WireApi) -> Mod
         .ok()
         .filter(|v| !v.trim().is_empty())
         .unwrap_or(default_oss_base_url);
-    create_oss_provider_with_base_url(&oss_base_url, wire_api)
+    create_local_provider_with_base_url(provider_name, &oss_base_url, wire_api)
 }
 
-pub fn create_oss_provider_with_base_url(base_url: &str, wire_api: WireApi) -> ModelProviderInfo {
+pub fn create_local_provider_with_base_url(
+    provider_name: &str,
+    base_url: &str,
+    wire_api: WireApi,
+) -> ModelProviderInfo {
     ModelProviderInfo {
-        name: "gpt-oss".into(),
+        name: provider_name.into(),
         base_url: Some(base_url.into()),
         env_key: None,
         env_key_instructions: None,
         experimental_bearer_token: None,
         auth: None,
-        aws: None,
         wire_api,
         query_params: None,
         http_headers: None,
@@ -477,6 +441,14 @@ pub fn create_oss_provider_with_base_url(base_url: &str, wire_api: WireApi) -> M
         stream_idle_timeout_ms: None,
         websocket_connect_timeout_ms: None,
         supports_websockets: false,
+    }
+}
+
+pub fn default_model_for_provider(provider_id: &str) -> &'static str {
+    match provider_id {
+        OLLAMA_OSS_PROVIDER_ID => DEFAULT_OLLAMA_MODEL,
+        LMSTUDIO_OSS_PROVIDER_ID => DEFAULT_LMSTUDIO_MODEL,
+        _ => DEFAULT_OPENAI_COMPATIBLE_MODEL,
     }
 }
 

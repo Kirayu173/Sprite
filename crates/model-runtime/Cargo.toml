@@ -1,0 +1,29 @@
+[package]
+name = "model-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "model_runtime"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+bytes = { workspace = true }
+futures = { workspace = true }
+http = { workspace = true }
+model-catalog = { workspace = true }
+model-provider-info = { workspace = true }
+reqwest = { workspace = true, features = ["json", "stream"] }
+runtime-protocol = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["macros", "process", "rt", "sync", "time"] }
+tokio-tungstenite = { workspace = true }
+tokio-stream = { workspace = true }

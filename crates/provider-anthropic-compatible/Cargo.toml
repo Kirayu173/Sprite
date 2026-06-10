@@ -1,0 +1,29 @@
+[package]
+name = "provider-anthropic-compatible"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "provider_anthropic_compatible"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+futures = { workspace = true }
+model-provider-info = { workspace = true }
+model-runtime = { workspace = true }
+reqwest = { workspace = true, features = ["json", "stream"] }
+runtime-protocol = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt", "sync"] }
+tokio-stream = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+

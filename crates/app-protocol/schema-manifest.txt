@@ -455,7 +455,6 @@ typescript/v2/MemoryCitationEntry.ts
 typescript/v2/MergeStrategy.ts
 typescript/v2/MigrationDetails.ts
 typescript/v2/Model.ts
-typescript/v2/ModelAvailabilityNux.ts
 typescript/v2/ModelListParams.ts
 typescript/v2/ModelListResponse.ts
 typescript/v2/ModelProviderCapabilitiesReadParams.ts
@@ -463,7 +462,6 @@ typescript/v2/ModelProviderCapabilitiesReadResponse.ts
 typescript/v2/ModelReroutedNotification.ts
 typescript/v2/ModelRerouteReason.ts
 typescript/v2/ModelServiceTier.ts
-typescript/v2/ModelUpgradeInfo.ts
 typescript/v2/NetworkAccess.ts
 typescript/v2/NetworkApprovalContext.ts
 typescript/v2/NetworkApprovalProtocol.ts

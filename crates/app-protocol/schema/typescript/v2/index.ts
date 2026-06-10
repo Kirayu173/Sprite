@@ -185,7 +185,6 @@ export type { MemoryCitationEntry } from "./MemoryCitationEntry";
 export type { MergeStrategy } from "./MergeStrategy";
 export type { MigrationDetails } from "./MigrationDetails";
 export type { Model } from "./Model";
-export type { ModelAvailabilityNux } from "./ModelAvailabilityNux";
 export type { ModelListParams } from "./ModelListParams";
 export type { ModelListResponse } from "./ModelListResponse";
 export type { ModelProviderCapabilitiesReadParams } from "./ModelProviderCapabilitiesReadParams";
@@ -193,7 +192,6 @@ export type { ModelProviderCapabilitiesReadResponse } from "./ModelProviderCapab
 export type { ModelRerouteReason } from "./ModelRerouteReason";
 export type { ModelReroutedNotification } from "./ModelReroutedNotification";
 export type { ModelServiceTier } from "./ModelServiceTier";
-export type { ModelUpgradeInfo } from "./ModelUpgradeInfo";
 export type { NetworkAccess } from "./NetworkAccess";
 export type { NetworkApprovalContext } from "./NetworkApprovalContext";
 export type { NetworkApprovalProtocol } from "./NetworkApprovalProtocol";

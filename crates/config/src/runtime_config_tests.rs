@@ -201,6 +201,34 @@ PreToolUse = [{ matcher = "shell", hooks = [{ type = "command", command = "echo 
 }
 
 #[tokio::test]
+async fn runtime_config_prefers_local_provider_default_model_when_model_is_unset() {
+    let temp_dir = TempDir::new().expect("tempdir");
+    let sprite_home = temp_dir.path().join("home");
+    fs::create_dir_all(&sprite_home).await.expect("home dir");
+    let cwd = AbsolutePathBuf::from_absolute_path(temp_dir.path()).expect("absolute cwd");
+    fs::write(
+        sprite_home.join(crate::CONFIG_TOML_FILE),
+        r#"
+model_provider = "ollama"
+local_provider_default_model = "custom-oss"
+"#,
+    )
+    .await
+    .expect("write config");
+
+    let config = RuntimeConfig::builder()
+        .sprite_home(sprite_home)
+        .cwd(cwd)
+        .loader_overrides(LoaderOverrides::without_host_requirements_for_tests())
+        .load_with(&TestFileSystem, &crate::NoopThreadConfigLoader)
+        .await
+        .expect("runtime config loads");
+
+    assert_eq!(config.model_provider_id, "ollama");
+    assert_eq!(config.model, "custom-oss");
+}
+
+#[tokio::test]
 async fn runtime_config_applies_thread_user_and_session_config_sources() {
     let temp_dir = TempDir::new().expect("tempdir");
     let sprite_home = temp_dir.path().join("home");

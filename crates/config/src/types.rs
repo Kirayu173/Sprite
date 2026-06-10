@@ -358,14 +358,6 @@ pub struct TuiNotificationSettings {
     pub condition: NotificationCondition,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default, JsonSchema)]
-#[schemars(deny_unknown_fields)]
-pub struct ModelAvailabilityNuxConfig {
-    /// Number of times a startup availability NUX has been shown per model slug.
-    #[serde(default, flatten)]
-    pub shown_count: HashMap<String, u32>,
-}
-
 /// Fallback resize-reflow row cap when Sprite cannot identify a terminal-specific scrollback size.
 pub const DEFAULT_TERMINAL_RESIZE_REFLOW_FALLBACK_MAX_ROWS: usize = 1_000;
 
@@ -454,10 +446,6 @@ pub struct Tui {
     /// Context bindings take precedence over `global` bindings.
     #[serde(default)]
     pub keymap: TuiKeymap,
-
-    /// Startup tooltip availability NUX state persisted by the TUI.
-    #[serde(default)]
-    pub model_availability_nux: ModelAvailabilityNuxConfig,
 
     /// Trim terminal resize-reflow replay to the most recent rendered terminal rows when the
     /// transcript exceeds this cap. Omit to use Sprite's terminal-specific default. Set to `0` to

@@ -3035,7 +3035,7 @@ mod tests {
                 new_agent_nickname: Some("Scout".into()),
                 new_agent_role: Some("explorer".into()),
                 prompt: "inspect the repo".into(),
-                model: "gpt-5.4-mini".into(),
+                model: "sprite-mini".into(),
                 reasoning_effort: runtime_protocol::model_capabilities::ReasoningEffort::Medium,
                 status: AgentStatus::Running,
             }),
@@ -3057,7 +3057,7 @@ mod tests {
                 sender_thread_id: "00000000-0000-0000-0000-000000000001".into(),
                 receiver_thread_ids: vec!["00000000-0000-0000-0000-000000000002".into()],
                 prompt: Some("inspect the repo".into()),
-                model: Some("gpt-5.4-mini".into()),
+                model: Some("sprite-mini".into()),
                 reasoning_effort: Some(
                     runtime_protocol::model_capabilities::ReasoningEffort::Medium
                 ),
